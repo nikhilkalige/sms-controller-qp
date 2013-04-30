@@ -1,0 +1,55 @@
+{
+	"folders":
+	[
+		{
+			"path": "/G/workspace/projects/avr_gcc/ring_buffer"
+		},
+		{
+			"path": "/G/workspace/projects/avr_gcc/gsm_serial"
+		},
+		{
+			"path": "/G/workspace/projects/avr_gcc/blinky"
+		},
+		{
+			"path": "/D/Nikhil/Personal Projects/Quantum Leaps/qpc-qpn/ports/avr/qk"
+		},
+		{
+			"path": "/G/workspace/quantum_leaps/qpc-qpn/include"
+		},
+		{
+			"path": "/G/workspace/quantum_leaps/qpc-qpn/source"
+		},
+		{
+			"path": "/G/workspace/quantum_leaps/qpc-qpn/ports/avr/qk"
+		}
+	],
+	"settings":
+	{
+		"sublimeclang_dont_prepend_clang_includes": true,
+		"sublimeclang_enabled": true,
+		"sublimeclang_hide_output_when_empty": true,
+		"sublimeclang_options":
+		[
+			"-Wall",
+			"-Wno-attributes",
+			"-Wno-unknown-attributes",
+			"-Wno-builtin-requires-header",
+			"-ccc-host-triple",
+			"mips",
+			"-I${project_path:main}",
+			"-IC:\\Program Files\\Atmel\\AVR Tools\\AVR Toolchain\\avr\\include",
+			"-IC:\\Program Files\\Atmel\\AVR Tools\\AVR Toolchain\\avr\\include\\**",
+			"-IC:\\Program Files\\Atmel\\AVR Tools\\AVR Toolchain\\lib\\gcc\\avr\\4.6.2\\include",
+			"-IC:\\Program Files\\Atmel\\AVR Tools\\AVR Toolchain\\lib\\gcc\\avr\\4.6.2\\include-fixed",
+			"-ID:\\Nikhil\\Personal Projects\\Quantum Leaps\\qpc-qpn\\include",
+			"-ID:\\Nikhil\\Personal Projects\\Quantum Leaps\\qpc-qpn\\source",
+			"-ID:\\Nikhil\\Personal Projects\\Quantum Leaps\\qpc-qpn\\ports\\avr\\qk",
+			"-D__AVR_ATmega328P__",
+			"-DF_CPU=16000000L"
+		],
+		"sublimeclang_show_output_panel": true,
+		"sublimeclang_show_status": true,
+		"sublimeclang_show_visual_error_marks": true,
+		"tab_size": 8
+	}
+}
