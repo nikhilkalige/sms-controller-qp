@@ -44,6 +44,8 @@
 	SERIAL_RECIEVE_SIG,		// Serial recieve signal
 	GSM_PROCESS_SIG,		// Start processing the command
 	GSM_DONE_SIG,			// GSM Finished processing
+	GSM_SUCCESS_EVENT,
+	GSM_FAILURE_EVENT,
     	MAX_PUB_SIG,			// the last published signal
  };
 #endif

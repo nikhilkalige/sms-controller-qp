@@ -117,16 +117,14 @@ int8_t Serial_SendBufferNonBlocking(QActive* AO, const uint8_t *buffer, uint16_t
 	Serial_device.AO_Trans = AO;
 	Serial_device.AO_Recv = AO;
 
-	if (len > fifoBuf_getFree(&tx_buffer)) 
-	{
+	if (len > fifoBuf_getFree(&tx_buffer)) {
 		/* Buffer cannot accept all requested bytes (retry) */
 		return -2;
 	}
 	cli();
 	uint8_t bytes_into_fifo = fifoBuf_putData(&tx_buffer, buffer, len);
 	sei();
-	if (bytes_into_fifo > 0) 
-	{
+	if (bytes_into_fifo > 0) {
 		/* More data has been put in the tx buffer, make sure the tx is started */
 		UCSR0B |= _BV(UDRIE0);	
 	}
