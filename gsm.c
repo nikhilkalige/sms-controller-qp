@@ -23,7 +23,7 @@ typedef struct Gsm_tag
     QActive super;
     /* Public Members */
     Com *p_comm;
-    QActive *master;
+    App *master;
     volatile uint8_t tx_buffer_full;
     struct
     {
@@ -111,13 +111,12 @@ void GSM_ctor(void)
     QActive_ctor(&gsm_dev.super, Q_STATE_CAST(&inactive_init));
 }
 
-void GSM_config(QActive *master, QActive *com_drv, uint8_t *buffer)
+void GSM_config(App *master, Com *com_drv)
 {
     gsm_dev.master = master;
     gsm_dev.p_comm = com_drv;
     gsm_dev.control.current_op = 0;
-    gsm_dev.control.master_buffer = buffer;
-
+    gsm_dev.control.master_buffer = master->buffer;
 }
 
 /************************************************************************************************************************************
@@ -337,6 +336,11 @@ static void sms_delete_command(uint8_t pos)
     send_command((uint8_t *)CMGD, 1);
     send_command(&pos, 0);
     send_command_timeout((uint8_t *)"\r\n", 1000, 0);
+}
+
+static void sms_delete_all_command()
+{
+    send_command((uint8_t*)CMGDA, 1);
 }
 
 static void get_time_command(void)
@@ -1142,7 +1146,7 @@ static QState active_sms_read(Gsm *const me)
                 {
                     p_char++;
                 }
-                p_char1 = memchar((char *)(p_char), 0x0d, 130);
+                p_char1 = memchr((char *)(p_char), 0x0d, 130);
                 if (p_char1 != NULL)
                 {
                     // finish the SMS text string

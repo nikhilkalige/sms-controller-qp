@@ -27,7 +27,7 @@
 # make program = Download the hex file to the device, using avrdude.
 #                Please customize the avrdude settings below first!
 #
-# make debug = Start either simulavr or avarice as specified for debugging, 
+# make debug = Start either simulavr or avarice as specified for debugging,
 #              with avr-gdb or avr-insight as the front end for debugging.
 #
 # make filename.s = Just compile filename.c into the assembler code only.
@@ -44,8 +44,8 @@ MCU = atmega328p
 
 
 # Processor frequency.
-#     This will define a symbol, F_CPU, in all source code files equal to the 
-#     processor frequency. You can then use this symbol in your source code to 
+#     This will define a symbol, F_CPU, in all source code files equal to the
+#     processor frequency. You can then use this symbol in your source code to
 #     calculate timings. Do NOT tack on a 'UL' at the end, this will be done
 #     automatically to create a 32-bit value in your source code.
 F_CPU = 16000000
@@ -64,7 +64,11 @@ SRC = $(TARGET).c \
 	fifo_buffer.c \
 	serial.c \
 	bsp.c \
-	gsm.c
+	gsm.c \
+	com.c \
+	app.c \
+	debug.c \
+	util.c
 
 
 # List Assembler source files here.
@@ -74,10 +78,10 @@ SRC = $(TARGET).c \
 #     Even though the DOS/Win* filesystem matches both .s and .S the same,
 #     it will preserve the spelling of the filenames, and gcc itself does
 #     care about how the name is spelled on its command-line.
-ASRC = 
+ASRC =
 
 
-# Optimization level, can be [0, 1, 2, 3, s]. 
+# Optimization level, can be [0, 1, 2, 3, s].
 #     0 = turn off optimization. s = optimize for size.
 #     (Note: 3 is not always the best optimization level. See avr-libc FAQ.)
 OPT = 0
@@ -102,8 +106,8 @@ EXTRAINCDIRS =
 # List any QP directories to look for include files here.
 QP_INCDIR = /home/nikhil/workspace/quantum_leaps/qpc-qpn/include
 
-# List QP Controller specific port directory 
-QP_PRTDIR = /home/nikhil/workspace/quantum_leaps/qpc-qpn/ports/avr/qk/
+# List QP Controller specific port directory
+#QP_PRTDIR = /home/nikhil/workspace/quantum_leaps/qpc-qpn/ports/avr/qk/
 
 # List any QP directories to look for source files here.
 QP_SRCDIR = /home/nikhil/workspace/quantum_leaps/qpc-qpn/source
@@ -111,19 +115,19 @@ QP_SRCDIR = /home/nikhil/workspace/quantum_leaps/qpc-qpn/source
 # List all QP source files here.
 QP_SRC = $(QP_SRCDIR)/qepn.c \
 	$(QP_SRCDIR)/qfn.c \
-	$(QP_SRCDIR)/qkn.c
+	#$(QP_SRCDIR)/qkn.c
 
 QP_SRC = qepn.c \
 	qfn.c \
-	qkn.c
+	#qkn.c
 
-QP_OBJ =  $(QP_SRC:.c=.o) 
+QP_OBJ =  $(QP_SRC:.c=.o)
 
 VPATH = $(QP_SRCDIR)
 ########## End of Quantum Leaps related dependencies ##########
 
 
-# Output build directory 
+# Output build directory
 BLDDIR = debug
 
 
@@ -171,7 +175,7 @@ CFLAGS += $(CSTANDARD)
 #             for use in COFF files, additional information about filenames
 #             and function names needs to be present in the assembler source
 #             files -- see avr-libc docs [FIXME: not yet described there]
-#  -listing-cont-lines: Sets the maximum number of continuation lines of hex 
+#  -listing-cont-lines: Sets the maximum number of continuation lines of hex
 #       dump that will be displayed for a given single line of source input.
 ASFLAGS = -Wa,-adhlns=$(<:.S=.lst),-gstabs,--listing-cont-lines=100
 
@@ -184,7 +188,7 @@ PRINTF_LIB_MIN = -Wl,-u,vfprintf -lprintf_min
 PRINTF_LIB_FLOAT = -Wl,-u,vfprintf -lprintf_flt
 
 # If this is left blank, then it will use the Standard printf version.
-PRINTF_LIB = 
+PRINTF_LIB =
 #PRINTF_LIB = $(PRINTF_LIB_MIN)
 #PRINTF_LIB = $(PRINTF_LIB_FLOAT)
 
@@ -196,7 +200,7 @@ SCANF_LIB_MIN = -Wl,-u,vfscanf -lscanf_min
 SCANF_LIB_FLOAT = -Wl,-u,vfscanf -lscanf_flt
 
 # If this is left blank, then it will use the Standard scanf version.
-SCANF_LIB = 
+SCANF_LIB =
 #SCANF_LIB = $(SCANF_LIB_MIN)
 #SCANF_LIB = $(SCANF_LIB_FLOAT)
 
@@ -215,7 +219,7 @@ MATH_LIB = -lm
 # only used for heap (malloc()).
 #EXTMEMOPTS = -Wl,--defsym=__heap_start=0x801100,--defsym=__heap_end=0x80ffff
 
-EXTMEMOPTS = 
+EXTMEMOPTS =
 
 
 
@@ -231,7 +235,7 @@ LDFLAGS += $(PRINTF_LIB) $(SCANF_LIB) $(MATH_LIB)
 
 #---------------- Programming Options (avrdude) ----------------
 
-# Programming hardware: alf avr910 avrisp bascom bsd 
+# Programming hardware: alf avr910 avrisp bascom bsd
 # dt006 pavr picoweb pony-stk200 sp12 stk200 stk500
 #
 # Type: avrdude -c ?
@@ -256,7 +260,7 @@ AVRDUDE_WRITE_FLASH = -U flash:w:$(BLDDIR)/$(TARGET).hex
 #AVRDUDE_NO_VERIFY = -V
 
 # Increase verbosity level.  Please use this when submitting bug
-# reports about avrdude. See <http://savannah.nongnu.org/projects/avrdude> 
+# reports about avrdude. See <http://savannah.nongnu.org/projects/avrdude>
 # to submit bug reports.
 #AVRDUDE_VERBOSE = -v -v
 
@@ -290,7 +294,7 @@ JTAG_DEV = /dev/com1
 DEBUG_PORT = 4242
 
 # Debugging host used to communicate between GDB / avarice / simulavr, normally
-#     just set to localhost unless doing some sort of crazy debugging when 
+#     just set to localhost unless doing some sort of crazy debugging when
 #     avarice is running on a different computer.
 DEBUG_HOST = localhost
 
@@ -317,7 +321,7 @@ WINSHELL = cmd
 MSG_ERRORS_NONE = Errors: none
 MSG_BEGIN = -------- begin --------
 MSG_END = --------  end  --------
-MSG_SIZE_BEFORE = Size before: 
+MSG_SIZE_BEFORE = Size before:
 MSG_SIZE_AFTER = Size after:
 MSG_COFF = Converting to AVR COFF:
 MSG_EXTENDED_COFF = Converting to AVR Extended COFF:
@@ -334,14 +338,14 @@ MSG_CLEANING = Cleaning project:
 
 
 # Define all object files.
-#OBJ_FILES = $(SRC:.c=.o) $(ASRC:.S=.o) $(QP_SRC:.c=.o) 
-OBJ_FILES = $(SRC:.c=.o) $(ASRC:.S=.o) $(QP_SRC:.c=.o) 
-OBJ = $(addprefix $(BLDDIR)/,$(OBJ_FILES)) 
+#OBJ_FILES = $(SRC:.c=.o) $(ASRC:.S=.o) $(QP_SRC:.c=.o)
+OBJ_FILES = $(SRC:.c=.o) $(ASRC:.S=.o) $(QP_SRC:.c=.o)
+OBJ = $(addprefix $(BLDDIR)/,$(OBJ_FILES))
 
 # Define all listing files.
-#LST = $(BLDDIR)/$(SRC:.c=.lst) $(BLDDIR)/$(QP_SRC:.c=.lst) $(BLDDIR)/$(ASRC:.S=.lst) 
-LST_FILES = $(SRC:.c=.lst) $(ASRC:.S=.lst) $(QP_SRC:.c=.lst) 
-LST = $(addprefix $(BLDDIR)/,$(LST_FILES)) 
+#LST = $(BLDDIR)/$(SRC:.c=.lst) $(BLDDIR)/$(QP_SRC:.c=.lst) $(BLDDIR)/$(ASRC:.S=.lst)
+LST_FILES = $(SRC:.c=.lst) $(ASRC:.S=.lst) $(QP_SRC:.c=.lst)
+LST = $(addprefix $(BLDDIR)/,$(LST_FILES))
 
 
 # Compiler flags to generate dependency files.
@@ -366,7 +370,7 @@ build: elf hex eep lss sym
 elf: $(BLDDIR)/$(TARGET).elf
 hex: $(BLDDIR)/$(TARGET).hex
 eep: $(BLDDIR)/$(TARGET).eep
-lss: $(BLDDIR)/$(TARGET).lss 
+lss: $(BLDDIR)/$(TARGET).lss
 sym: $(BLDDIR)/$(TARGET).sym
 
 
@@ -398,20 +402,20 @@ sizeafter:
 
 
 # Display compiler version information.
-gccversion : 
+gccversion :
 	@$(CC) --version
 
 
 
-# Program the device.  
+# Program the device.
 program: $(BLDDIR)/$(TARGET).hex $(BLDDIR)/$(TARGET).eep
 	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH) $(AVRDUDE_WRITE_EEPROM)
 
 
 # Generate avr-gdb config/init file which does the following:
-#     define the reset signal, load the target file, connect to target, and set 
+#     define the reset signal, load the target file, connect to target, and set
 #     a breakpoint at main().
-gdb-config: 
+gdb-config:
 	@$(REMOVE) $(GDBINIT_FILE)
 	@echo define reset >> $(GDBINIT_FILE)
 	@echo SIGNAL SIGHUP >> $(GDBINIT_FILE)
@@ -420,7 +424,7 @@ gdb-config:
 	@echo target remote $(DEBUG_HOST):$(DEBUG_PORT)  >> $(GDBINIT_FILE)
 ifeq ($(DEBUG_BACKEND),simulavr)
 	@echo load  >> $(GDBINIT_FILE)
-endif	
+endif
 	@echo break main >> $(GDBINIT_FILE)
 
 debug: gdb-config $(TARGET).elf
@@ -442,7 +446,7 @@ COFFCONVERT=$(OBJCOPY) --debugging \
 --change-section-address .data-0x800000 \
 --change-section-address .bss-0x800000 \
 --change-section-address .noinit-0x800000 \
---change-section-address .eeprom-0x810000 
+--change-section-address .eeprom-0x810000
 
 
 coff: $(TARGET).elf
@@ -497,7 +501,7 @@ $(BLDDIR)/%.elf: $(OBJ) | dir
 $(BLDDIR)/%.o : %.c
 	@echo
 	@echo $(MSG_COMPILING) $<
-	$(CC) -c $(ALL_CFLAGS) $< -o $(BLDDIR)/$(@F) 
+	$(CC) -c $(ALL_CFLAGS) $< -o $(BLDDIR)/$(@F)
 
 
 # Compile: create assembler files from C source files.
@@ -513,7 +517,7 @@ $(BLDDIR)/%.o : %.c
 
 # Create preprocessed source for use in sending a bug report.
 %.i : %.c
-	$(CC) -E -mmcu=$(MCU) -I. $(CFLAGS) $< -o $(BLDDIR)/$@ 
+	$(CC) -E -mmcu=$(MCU) -I. $(CFLAGS) $< -o $(BLDDIR)/$@
 
 # Create a directory for the build files
 dir:

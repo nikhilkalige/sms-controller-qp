@@ -8,8 +8,8 @@
  *
  *****************************************************************************/
 
- #ifndef _DEBUG_H_
- #define _DEBUG_H_
+ #ifndef DEBUG_H_
+ #define DEBUG_H_
 
 #ifdef DEBUG
 #define DEBUG_Assert(test) if (!(test)) DEBUG_Panic(DEBUG_AssertMsg);

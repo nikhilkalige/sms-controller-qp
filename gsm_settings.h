@@ -7,8 +7,8 @@
  * @see        The GNU Public License (GPL) Version 3
  *
  *****************************************************************************/
-#ifndef _GSM_SETTINGS_H_
-#define _GSM_SETTINGS_H_
+#ifndef GSM_SETTINGS_H_
+#define GSM_SETTINGS_H_
 
 #include "settings.h"
 
@@ -18,6 +18,12 @@ const uint8_t frc1[] PROGMEM = "+CME ERROR:";
 const uint8_t frc2[] PROGMEM = "+CMS ERROR:";
 const uint8_t frc3[] PROGMEM = "OK";
 const uint8_t frc4[] PROGMEM = "ERROR";
+
+/* Hardware Configuration */
+#define GSM_PWR_DDR     DDRB
+#define GSM_BAUD        19200
+#define GSM_PWR_PORT    PORTB
+#define GSM_PWRKEY      1
 
 enum frc_codes
 {
@@ -141,11 +147,11 @@ struct at_response_code sms_table[] =
     (uint8_t*) 0, 0, 0
 };
 
-struct at_response_code acc_table[] = 
+struct at_response_code acc_table[] =
 {
 	(uint8_t*)"+CCLK:", EVENT_GSM_CLOCK_RESPONSE, GSM_CLOCK_READ,
 	// array terminator !!!
-    (uint8_t*) 0, 0, 0	
+    (uint8_t*) 0, 0, 0
 };
 
 struct at_response_code network_table[] =

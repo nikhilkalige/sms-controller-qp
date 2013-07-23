@@ -58,10 +58,10 @@ Serial_device ser_dev;
 /* ISR for Serial UART Transmit */
 ISR( USART_UDRE_vect)
 {
-#ifdef Q_LEAPS
+#ifdef QPK
     QK_ISR_ENTRY();
 #endif
-    if(ser_dev.tx.read_ix < ser_dev.tx.payload_size)
+    if (ser_dev.tx.read_ix < ser_dev.tx.payload_size)
     {
         UDR0 = ser_dev.tx.p_storage[ser_dev.tx.read_ix];
         ser_dev.tx.read_ix++;
@@ -78,7 +78,7 @@ ISR( USART_UDRE_vect)
 #endif
         //Serial_device.tx_busy = false;
     }
-#ifdef Q_LEAPS
+#ifdef QPK
     QK_ISR_EXIT();
 #endif
 }
@@ -89,13 +89,13 @@ ISR( USART_UDRE_vect)
  */
 ISR( USART_RX_vect)
 {
-#ifdef Q_LEAPS
+#ifdef QPK
     QK_ISR_ENTRY();
 #endif
     uint8_t byte;
     *ser_dev.p_timeout = 0;
     byte = UDR0;
-    if(ser_dev.rx.write_ix >= ser_dev.rx.buffer_size)
+    if (ser_dev.rx.write_ix >= ser_dev.rx.buffer_size)
     {
         /* Raise the overflow flag */
 
@@ -105,7 +105,7 @@ ISR( USART_RX_vect)
         ser_dev.rx.p_storage[ser_dev.rx.write_ix] = byte;
         ser_dev.rx.write_ix++;
     }
-#ifdef Q_LEAPS
+#ifdef QPK
     QK_ISR_EXIT();
 #endif
 }
@@ -179,7 +179,7 @@ void Serial_enable_transmitter()
     UCSR0B |= _BV(UDRIE0);
 }
 
-void Serial_init(uint8_t* storage_rx,uint8_t size_rx,uint8_t* p_timeout_,uint8_t *storage_tx, uint8_t size_tx, uint8_t *payload_tx, QActive *my_ao)
+void Serial_init(uint8_t *storage_rx, uint8_t size_rx, uint8_t *p_timeout_, uint8_t *storage_tx, uint8_t size_tx, uint8_t *payload_tx, QActive *my_ao)
 {
     ser_dev.rx.p_storage = storage_rx;
     ser_dev.rx.buffer_size = size_rx;

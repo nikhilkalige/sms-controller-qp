@@ -8,15 +8,15 @@
  *
  *****************************************************************************/
 
- #ifndef _FIFO_BUFFER_H_
- #define _FIFO_BUFFER_H_
+ #ifndef FIFO_BUFFER_H_
+ #define FIFO_BUFFER_H_
 
 #include "settings.h"
 
 
 #define ARCH 8
 
- 
+
 #if (ARCH == 8)
  	#define data_type uint8_t
 #elif (ARCH == 32)
@@ -26,8 +26,8 @@
 #endif
 
 
- 
- typedef struct 
+
+ typedef struct
  {
  	uint8_t *buf_ptr;
  	volatile data_type rd;

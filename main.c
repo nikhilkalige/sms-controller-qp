@@ -1,9 +1,10 @@
-#include "serial.h"
-#include "fifo_buffer.h"
 #include <avr/io.h>
 #include <util/delay.h>
 #include "bsp.h"
+#include "settings.h"
 #include "gsm.h"
+#include "app.h"
+#include "com.h"
 
 //extern t_fifo_buffer rx_buffer;
 
@@ -35,7 +36,7 @@ int main(void)
     //Serial_SendStringNonBlocking("Hi Lonewolf, we are ready to hunt \r\n");
     //Serial_SendStringNonBlocking("We are waiting for input \r\n");
     //fifoBuf_clearData(&rx_buffer);
-    GSM_config(&app_mod, &com_drv, app_mod.buffer);
+    GSM_config(&app_mod, &com_drv);
     Com_init(tx_buffer, 100, rx_buffer, 100);
     BSP_init();      /* initialize the board */
     App_ctor();

@@ -9,15 +9,8 @@
  *****************************************************************************/
 
 #include "app.h"
-
-typedef struct App_tag
-{
-    QActive super;
-    /* Public Members */
-    uint8_t buffer[100];
-} App;
-
-App app_mod;
+#include "gsm.h"
+//App app_mod;
 
 static QState initiate_app(App *const me);
 static QState init(App *const me);

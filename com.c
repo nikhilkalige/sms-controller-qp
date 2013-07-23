@@ -12,7 +12,7 @@
 
 
 
-Com com_drv;
+//Com com_drv;
 
 static QState Com_initial(Com *const me);
 static QState Com_open(Com *const me);

@@ -8,12 +8,22 @@
  *
  *****************************************************************************/
 
-#ifndef _APP_H_
-#define _APP_H_
+#ifndef APP_H_
+#define APP_H_
 
-#include "settings.h"
+
+#include <qpn_port.h>
+
 
 void App_ctor(void);
-extern struct App_tag app_mod;
+
+typedef struct App_tag
+{
+    QActive super;
+    /* Public Members */
+    uint8_t buffer[100];
+} App;
+
+App app_mod;
 
 #endif					/* app.h */

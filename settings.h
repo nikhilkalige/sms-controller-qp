@@ -7,8 +7,8 @@
  * @see        The GNU Public License (GPL) Version 3
  *
  *****************************************************************************/
-#ifndef _SETTINGS_H_
-#define _SETTINGS_H_
+#ifndef SETTINGS_H_
+#define SETTINGS_H_
 
 #include <stdio.h>
 #include <stdint.h>
@@ -30,16 +30,8 @@
 #include <qpn_port.h>
 #endif
 
-
-/* System Peripheral Headers */
-#include "serial.h"
-
-/* Module Headers */
-#include "com.h"
-#include "gsm.h"
-
-/* Application Headers */
-#include "app.h"
+/* Define if using Quantum Kernel */
+#undef QPK
 
 /* Generic Utilities Headers */
 #include "fifo_buffer.h"

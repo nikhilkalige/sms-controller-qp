@@ -8,8 +8,8 @@
  *
  *****************************************************************************/
 
-#ifndef _UTIL_H_
-#define _UTIL_H_
+#ifndef UTIL_H_
+#define UTIL_H_
 
 #include "settings.h"
 
