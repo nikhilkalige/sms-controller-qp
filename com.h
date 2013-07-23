@@ -41,6 +41,8 @@ typedef struct Com_tag
 } Com;
 
 void Com_init(uint8_t *tx_buffer, uint8_t tx_size, uint8_t *rx_buffer, uint8_t rx_size);
+void Com_ctor();
 
+extern Com com_drv;
 
 #endif                 /* com.h */

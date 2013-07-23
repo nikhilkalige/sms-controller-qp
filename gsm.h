@@ -18,10 +18,10 @@
 typedef enum GSM_timeouts_t
 {
 	/**************************************************
-	 Various timeouts in ticks 
+	 Various timeouts in ticks
 	 * For milliseconds - ( BSP_TICKS_PER_SEC * x)/1000
-	 * For seconds      - (BSP_TICKS_PER_SEC * x) 
-	 **************************************************/ 
+	 * For seconds      - (BSP_TICKS_PER_SEC * x)
+	 **************************************************/
 	START_TINY_COMM_TMOUT = (BSP_TICKS_PER_SEC * 20)/1000, // 20ms
 	START_SHORT_COMM_TMOUT = (BSP_TICKS_PER_SEC * 500)/1000, // 500ms
 	START_LONG_COMM_TMOUT = BSP_TICKS_PER_SEC * 1, // 1s
@@ -74,9 +74,9 @@ GSM_buffer_descriptor GSM_buffer;
 
 /* Global Functions */
 void GSM_parse_command(void *data);
+void GSM_config(QActive* master, QActive* com_drv, uint8_t* buffer);
+void GSM_ctor(void);
 
-void GSM_Ctor(void);
-
-extern struct GSMTag AO_GSM;
+extern struct Gsm_tag gsm_dev;
 
 #endif					/* gsm.h */

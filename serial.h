@@ -1,7 +1,7 @@
 /**
  ******************************************************************************
  *
- * @file       fifo_buffer.c
+ * @file       Serial.h
  * @author     Lonewolf
  * @brief      UART Header
  * @see        The GNU Public License (GPL) Version 3
@@ -26,7 +26,8 @@ uint16_t Serial_ReceiveBuffer(uint8_t * buf, uint16_t buf_len, uint8_t timeout_m
 #ifdef QP_LEAPS
 int8_t Serial_RecieveRegister(QActive* AO);
 #endif
-void Serial_init(void);
-
+void Serial_init(uint8_t* storage_rx,uint8_t size_rx,uint8_t* p_timeout_,uint8_t *storage_tx, uint8_t size_tx, uint8_t *payload_tx, QActive *my_ao);
+void Serial_config(void);
+void Serial_enable_transmitter();
 
 #endif					/* serial.h */

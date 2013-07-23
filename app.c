@@ -1,78 +1,59 @@
 /**
  ******************************************************************************
  *
- * @file       com.c
+ * @file       app.c
  * @author     Lonewolf
- * @brief      COM Driver functions
+ * @brief      Application functions
  * @see        The GNU Public License (GPL) Version 3
  *
  *****************************************************************************/
 
-#include "com.h"
+#include "app.h"
 
+typedef struct App_tag
+{
+    QActive super;
+    /* Public Members */
+    uint8_t buffer[100];
+} App;
 
+App app_mod;
 
-Com com_drv;
+static QState initiate_app(App *const me);
+static QState init(App *const me);
+static QState active(App *const me);
 
-static QState Com_initial(Com *const me);
-static QState Com_open(Com *const me);
-
-static void open();
 
 /************************************************************************************************************************************
                                                     ***** Public Funtions *****
 ************************************************************************************************************************************/
 
-void Com_ctor()
+void App_ctor(void)
 {
-    QActive_ctor(&com_drv.super, Q_STATE_CAST(&Com_initial));
-}
-
-void Com_init(uint8_t *tx_buffer, uint8_t tx_size, uint8_t *rx_buffer, uint8_t rx_size)
-{
-    com_drv.tx.p_data = tx_buffer;
-    com_drv.tx.size = tx_size;
-    com_drv.rx.p_data = rx_buffer;
-    com_drv.rx.size = rx_size;
-    com_drv.config.rx_timeout = 10;
-    Serial_init(com_drv.rx.p_data, com_drv.rx.size, &com_drv.config.rx_timeout, com_drv.tx.p_data, com_drv.tx.size, &com_drv.tx.payload_size, (QActive*)&com_drv);
-
+    QActive_ctor(&app_mod.super, Q_STATE_CAST(&initiate_app));
 }
 
 /************************************************************************************************************************************
                                                     ***** Private Funtions *****
 ************************************************************************************************************************************/
 
-static void open()
-{
-    com_drv.rx.timeout = 0xFF;
-    QActive_arm((QActive *)&com_drv, COM_RX_TIMEOUT);
-    Serial_config();
-}
-
-static void send()
-{
-    Serial_enable_transmitter();
-}
-
-
 /************************************************************************************************************************************
                                                     ***** State Machines *****
 ************************************************************************************************************************************/
 
-static QState Com_initial(Com *const me)
+static QState initiate_app(App *const me)
 {
-
-    return Q_TRAN(&Com_open);
+    return Q_TRAN(&init);
 }
 
-static QState Com_open(Com *const me)
+static QState init(App *const me)
 {
     QState status;
-    switch(Q_SIG(me))
+    switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
         {
+            QActive_arm((QActive*)me, 1);
             status = Q_HANDLED();
             break;
         }
@@ -81,40 +62,85 @@ static QState Com_open(Com *const me)
             status = Q_HANDLED();
             break;
         }
+        case Q_TIMEOUT_SIG:
+        {
+            QActive_post((QActive *)&gsm_dev, EVENT_SYSTEM_GSM_INIT, 0);
+            status = Q_HANDLED();
+            break;
+        }
+        case EVENT_GSM_INIT_DONE:
+        {
+            status = Q_TRAN(&active);
+            break;
+        }
+        case EVENT_GSM_INIT_FAILURE:
+        {
+            status = Q_HANDLED();
+            break;
+        }
         case Q_EXIT_SIG:
         {
+        	QActive_disarm((QActive*)me);
+        	status = Q_HANDLED();
+        	break;
+        }
+        default:
+        {
+            status = Q_SUPER(&QHsm_top);
+            break;
+        }
+    }
+    return status;
+}
+
+static QState active(App *const me)
+{
+    QState status;
+    switch (Q_SIG(me))
+    {
+        case Q_ENTRY_SIG:
+        {
+        	QActive_post((QActive*)&gsm_dev, EVENT_GSM_NETWORK_READ_REQUEST, 0);
             status = Q_HANDLED();
             break;
         }
-        case EVENT_COM_OPEN_REQUEST:
+        case Q_INIT_SIG:
         {
-            open();
             status = Q_HANDLED();
             break;
         }
-        case EVENT_COM_SEND_REQUEST:
+        case EVENT_GSM_BUSY:
         {
-            send();
-            status = Q_HANDLED();
+        	QActive_arm((QActive*)me, 1);
+        	status = Q_HANDLED();
+        	break;
         }
         case Q_TIMEOUT_SIG:
         {
-            QActive_arm((QActive *)me, COM_RX_TIMEOUT);
-            cli();
-            if(me->rx.timeout != 0xFF)
-            {
-                if((++me->rx.timeout) == me->config.rx_timeout)
-                {
-                    QActive_post((QActive *)me->master, EVENT_COM_DATA_AVAILABLE, 0);
-                }
-            }
-            sei();
-            status = Q_HANDLED();
-            break;
+
+        	status = Q_HANDLED();
+        	break;
         }
-        case EVENT_SERIAL_SEND_DONE:
+        case EVNET_GSM_MODULE_FAILURE:
         {
-            QActive_post((QActive *)me->master, EVENT_COM_SEND_DONE, 0);
+        	// Error
+        	// Holy cow
+        	status = Q_HANDLED();
+        	break;
+        }
+        case EVENT_GSM_NETWORK_ERROR:
+        {
+        	status = Q_HANDLED();
+        	break;
+        }
+        case EVENT_GSM_NETWORK_CONNECTED:
+        {
+        	// Ready to roll my friend
+        	status = Q_HANDLED();
+        	break;
+        }
+        case Q_EXIT_SIG:
+        {
             status = Q_HANDLED();
             break;
         }
@@ -126,5 +152,3 @@ static QState Com_open(Com *const me)
     }
     return status;
 }
-
-

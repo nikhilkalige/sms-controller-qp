@@ -34,6 +34,13 @@
 /* System Peripheral Headers */
 #include "serial.h"
 
+/* Module Headers */
+#include "com.h"
+#include "gsm.h"
+
+/* Application Headers */
+#include "app.h"
+
 /* Generic Utilities Headers */
 #include "fifo_buffer.h"
 //#include "util.h"
