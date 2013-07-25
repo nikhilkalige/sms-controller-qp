@@ -10,6 +10,7 @@
 
 #include "app.h"
 #include "gsm.h"
+#include "softserial.h"
 //App app_mod;
 
 static QState initiate_app(App *const me);
@@ -46,7 +47,8 @@ static QState init(App *const me)
     {
         case Q_ENTRY_SIG:
         {
-            QActive_arm((QActive*)me, 1);
+            QActive_arm((QActive*)me, 100);
+            Softserial_println("INIT APP TIME");
             status = Q_HANDLED();
             break;
         }
@@ -57,6 +59,7 @@ static QState init(App *const me)
         }
         case Q_TIMEOUT_SIG:
         {
+             Softserial_println("INIT APP T RECIEVED");
             QActive_post((QActive *)&gsm_dev, EVENT_SYSTEM_GSM_INIT, 0);
             status = Q_HANDLED();
             break;
@@ -93,6 +96,7 @@ static QState active(App *const me)
     {
         case Q_ENTRY_SIG:
         {
+            Softserial_println("Posting GSM init ");
         	QActive_post((QActive*)&gsm_dev, EVENT_GSM_NETWORK_READ_REQUEST, 0);
             status = Q_HANDLED();
             break;

@@ -12,6 +12,7 @@
 #include "gsm.h"
 #include "com.h"
 #include <gsm_settings.h>
+#include "softserial.h"
 
 #define RX_NOT_STARTED      0
 #define RX_ALREADY_STARTED  1
@@ -340,7 +341,7 @@ static void sms_delete_command(uint8_t pos)
 
 static void sms_delete_all_command()
 {
-    send_command((uint8_t*)CMGDA, 1);
+    send_command((uint8_t *)CMGDA, 1);
 }
 
 static void get_time_command(void)
@@ -390,6 +391,7 @@ static void read_sms_command(uint8_t position)
 
 static QState inactive_init(Gsm *const me)
 {
+    Softserial_println("GSM 1");
     return Q_TRAN(&inactive_super);
 }
 
@@ -400,13 +402,14 @@ static QState inactive_super(Gsm *const me)
     {
         case Q_ENTRY_SIG:
         {
-            status =  Q_TRAN(&inactive_systemsetup);
+            Softserial_println("GSM 2");
+            status = Q_HANDLED();
             break;
         }
 
         case Q_INIT_SIG:
         {
-            status = Q_HANDLED();
+            status =  Q_TRAN(&inactive_systemsetup);
             break;
         }
 
@@ -418,6 +421,7 @@ static QState inactive_super(Gsm *const me)
 
         default:
         {
+            Softserial_println("GSM SU HERRE");
             status = Q_SUPER(&QHsm_top);
             break;
         }
@@ -428,24 +432,33 @@ static QState inactive_super(Gsm *const me)
 static QState inactive_systemsetup(Gsm *const me)
 {
     QState status;
+    Softserial_println("GSM 311");
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
         {
+            Softserial_println("GSM 3");
             /* Configure the ports */
             GSM_PWR_DDR |= (1 << GSM_PWRKEY);
-            status = Q_TRAN(&inactive_opencom);
+            status = Q_HANDLED();
             break;
         }
 
         case Q_INIT_SIG:
         {
+            Softserial_println("GSM 3-2");
             status = Q_HANDLED();
             break;
         }
-
+        case EVENT_SYSTEM_GSM_INIT:
+        {
+            status = Q_TRAN(&inactive_opencom);
+            Softserial_println("GSM 3-222");
+            break;
+        }
         case Q_EXIT_SIG:
         {
+            Softserial_println("GSM 3-3");
             status = Q_HANDLED();
             break;
         }
@@ -461,12 +474,15 @@ static QState inactive_systemsetup(Gsm *const me)
 
 static QState inactive_opencom(Gsm *const me)
 {
+    Softserial_println("GSM 444");
     QState status;
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
         {
+            Softserial_println("GSM 4");
             QActive_post(gsm_dev.p_comm, EVENT_COM_OPEN_REQUEST, (uint16_t)GSM_BAUD);
+            Softserial_println("GSM 5");
             status = Q_HANDLED();
             break;
         }
@@ -490,6 +506,7 @@ static QState inactive_opencom(Gsm *const me)
 
         default:
         {
+            Softserial_println("GSM super");
             status = Q_SUPER(&inactive_super);
             break;
         }
@@ -504,12 +521,14 @@ static QState inactive_powering_on(Gsm *const me)
     {
         case Q_ENTRY_SIG:
         {
+            Softserial_println("P ON");
             status = Q_HANDLED();
             break;
         }
 
         case EVENT_SYSTEM_GSM_INIT:
         {
+            Softserial_println("INIT RECIEVED");
             GSM_PWR_PORT &= ~GSM_PWRKEY;
             QActive_arm((QActive *)me, 10);
             status = Q_HANDLED();
@@ -551,6 +570,7 @@ static QState inactive_check_comlink(Gsm *const me)
     {
         case Q_ENTRY_SIG:
         {
+            Softserial_println("SENDING AT");
             send_at_command();
             status = Q_HANDLED();
             break;

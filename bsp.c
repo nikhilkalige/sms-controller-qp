@@ -2,6 +2,8 @@
 #include "bsp.h"
 #include "serial.h"
 #include "gsm.h"
+#include "softserial.h"
+#include <stdlib.h>
 
 #define LED_ON(num) (PORTD |= 1 << num)
 #define LED_OFF(num) (PORTD &= ~ (1 << num))
@@ -67,10 +69,11 @@ void Q_onAssert(char const Q_ROM *const Q_ROM_VAR file, int line)
     (void)file;                                   /* avoid compiler warning */
     (void)line;                                   /* avoid compiler warning */
     QF_INT_DISABLE();
-    //    char int_str[10];
-    //    itoa(line, int_str, 10);
-    //   Serial_print_string_flash(file);
-    //    Serial_print_string(int_str);
+    char int_str[10];
+    itoa(line, int_str, 10);
+    Softserial_print_flash(file);
+    Softserial_print(" - ");
+    Softserial_println(int_str);
     PORTB |= 1 << 5;                                           /* all LEDs on */
     for (;;)         /* NOTE: replace the loop with reset for final version */
     {
@@ -96,9 +99,10 @@ void QK_onIdle(void)
 }
 #endif
 
-void QF_onIdle(void) {        /* entered with interrupts LOCKED, see NOTE01 */
+void QF_onIdle(void)          /* entered with interrupts LOCKED, see NOTE01 */
+{
 
-                     /* toggle the LED number 7 on and then off, see NOTE02 */
+    /* toggle the LED number 7 on and then off, see NOTE02 */
     LED_ON(7);
     LED_OFF(7);
 
@@ -106,7 +110,7 @@ void QF_onIdle(void) {        /* entered with interrupts LOCKED, see NOTE01 */
 
     SMCR = (0 << SM0) | (1 << SE);/*idle sleep mode, adjust to your project */
 
-      /* never separate the following two assembly instructions, see NOTE03 */
+    /* never separate the following two assembly instructions, see NOTE03 */
     __enable_interrupt();     /* NOTE: the following sleep instruction will */
     __sleep();     /* execute before entering any pending interrupt, NOTE01 */
 
