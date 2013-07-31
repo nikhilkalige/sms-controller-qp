@@ -203,7 +203,7 @@ PROGMEM const char   UNREAD [] = "\"REC UNREAD\"";
 PROGMEM const char   READ [] = "\"REC READ\"";
 PROGMEM const char   CMGD [] = "AT+CMGD=";
 PROGMEM const char   CCLK[] = "AT+CCLK=";
-PROGMEM const char   CCLK_REQ [] = "AT+CCLK?";
+PROGMEM const char   CCLK_REQ [] = "AT+CCLK?\r";
 PROGMEM const char  _CCLK [] = "+CCLK";
 PROGMEM const char  CMGDA[] = "AT+CMGDA=\"DEL ALL\"";
 

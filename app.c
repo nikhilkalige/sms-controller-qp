@@ -118,8 +118,14 @@ static QState active(App *const me)
         }
         case EVENT_GSM_NETWORK_CONNECTED:
         {
+            QActive_post((QActive *)&gsm_dev, EVENT_GSM_CLOCK_READ, 0);
             // Ready to roll my friend
             return Q_HANDLED();
+        }
+        case EVENT_GSM_CLOCK_READ_DONE:
+        {
+            Softserial_println("time read success");
+            Softserial_println((char *)me->buffer);
         }
         case Q_EXIT_SIG:
         {
