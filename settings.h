@@ -37,6 +37,14 @@
 #include "fifo_buffer.h"
 //#include "util.h"
 
+/* Timer delay Generation
+ * Minimum Resolution = 1/BSP_TICKS_PER_SEC
+ * No of ticks = Time in seconds / Minimum Resolution
+ */
+
+#define ms       * BSP_TICKS_PER_SEC/1000
+#define sec      * BSP_TICKS_PER_SEC
+
 
 #ifdef Q_LEAPS
 enum system_events
@@ -45,6 +53,7 @@ enum system_events
 
     // Events related to system
     EVENT_SYSTEM_GSM_INIT,
+    EVENT_SYSTEM_START_AO,
 
     // Events related to UART
     EVENT_SERIAL_SEND_DONE,
@@ -52,7 +61,7 @@ enum system_events
 
     // Events related to COM
     EVENT_COM_OPEN_REQUEST,
-    EVENT_COM_OPENED,
+    EVENT_COM_OPEN_DONE,
     EVENT_COM_SEND_REQUEST,
     EVENT_COM_SEND_DONE,
     EVENT_COM_RX_TIMEOUT,

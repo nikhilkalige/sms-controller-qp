@@ -29,5 +29,7 @@ int8_t Serial_RecieveRegister(QActive* AO);
 void Serial_init(uint8_t* storage_rx,uint8_t size_rx,uint8_t* p_timeout_,uint8_t *storage_tx, uint8_t size_tx, uint8_t *payload_tx, QActive *my_ao);
 void Serial_config(void);
 void Serial_enable_transmitter();
+uint8_t Serial_read_size();
+void Serial_restart_rx();
 
 #endif					/* serial.h */

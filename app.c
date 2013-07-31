@@ -42,110 +42,92 @@ static QState initiate_app(App *const me)
 
 static QState init(App *const me)
 {
-    QState status;
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
         {
-            QActive_arm((QActive*)me, 100);
+            QActive_post((QActive *)&gsm_dev, EVENT_SYSTEM_START_AO, 0);
             Softserial_println("INIT APP TIME");
-            status = Q_HANDLED();
-            break;
+            QActive_arm((QActive *)me, 5 sec);
+            return Q_HANDLED();
         }
         case Q_INIT_SIG:
         {
-            status = Q_HANDLED();
-            break;
+            return Q_HANDLED();
         }
         case Q_TIMEOUT_SIG:
         {
-             Softserial_println("INIT APP T RECIEVED");
+            Softserial_println("INIT APP T RECIEVED");
             QActive_post((QActive *)&gsm_dev, EVENT_SYSTEM_GSM_INIT, 0);
-            status = Q_HANDLED();
-            break;
+            //QActive_arm((QActive *)me, 1 sec);
+            return Q_HANDLED();
         }
         case EVENT_GSM_INIT_DONE:
         {
-            status = Q_TRAN(&active);
-            break;
+            Softserial_println("GSM INIT DONE");
+            return Q_TRAN(&active);
         }
         case EVENT_GSM_INIT_FAILURE:
         {
-            status = Q_HANDLED();
-            break;
+            return Q_HANDLED();
         }
         case Q_EXIT_SIG:
         {
-        	QActive_disarm((QActive*)me);
-        	status = Q_HANDLED();
-        	break;
+            QActive_disarm((QActive *)me);
+            return Q_HANDLED();
         }
         default:
         {
-            status = Q_SUPER(&QHsm_top);
-            break;
+            return Q_SUPER(&QHsm_top);
         }
     }
-    return status;
 }
 
 static QState active(App *const me)
 {
-    QState status;
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
         {
             Softserial_println("Posting GSM init ");
-        	QActive_post((QActive*)&gsm_dev, EVENT_GSM_NETWORK_READ_REQUEST, 0);
-            status = Q_HANDLED();
-            break;
+            QActive_post((QActive *)&gsm_dev, EVENT_GSM_NETWORK_READ_REQUEST, 0);
+            return Q_HANDLED();
         }
         case Q_INIT_SIG:
         {
-            status = Q_HANDLED();
-            break;
+            return Q_HANDLED();
         }
         case EVENT_GSM_BUSY:
         {
-        	QActive_arm((QActive*)me, 1);
-        	status = Q_HANDLED();
-        	break;
+            QActive_arm((QActive *)me, 1);
+            return Q_HANDLED();
         }
         case Q_TIMEOUT_SIG:
         {
-
-        	status = Q_HANDLED();
-        	break;
+            return Q_HANDLED();
         }
         case EVNET_GSM_MODULE_FAILURE:
         {
-        	// Error
-        	// Holy cow
-        	status = Q_HANDLED();
-        	break;
+            // Error
+            // Holy cow
+            return Q_HANDLED();
         }
         case EVENT_GSM_NETWORK_ERROR:
         {
-        	status = Q_HANDLED();
-        	break;
+            return Q_HANDLED();
         }
         case EVENT_GSM_NETWORK_CONNECTED:
         {
-        	// Ready to roll my friend
-        	status = Q_HANDLED();
-        	break;
+            // Ready to roll my friend
+            return Q_HANDLED();
         }
         case Q_EXIT_SIG:
         {
-            status = Q_HANDLED();
-            break;
+            return Q_HANDLED();
         }
         default:
         {
-            status = Q_SUPER(&QHsm_top);
-            break;
+            return Q_SUPER(&QHsm_top);
         }
     }
-    return status;
 }

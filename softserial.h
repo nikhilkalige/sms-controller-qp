@@ -29,6 +29,7 @@
 void Softserial_begin(long);
 void Softserial_print(const char[]);
 void Softserial_println(const char[]);
+void Softserial_print_array(const char *s, uint8_t length);
 void Softserial_print_flash(const char[]);
 void Softserial_println_flash(const char[]);
 void Softserial_print_byte(uint8_t n);

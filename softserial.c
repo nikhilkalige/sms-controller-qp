@@ -256,6 +256,15 @@ void Softserial_println(const char *s)
     send_byte('\n');
 }
 
+void Softserial_print_array(const char *s, uint8_t length)
+{
+    uint8_t i = 0;
+    while(i < length)
+    {
+        send_byte(s[i++]);
+    }
+}
+
 void Softserial_print_flash(const char *s)
 {
     while (pgm_read_byte(s))

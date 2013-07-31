@@ -87,8 +87,8 @@ void QK_onIdle(void)
     PORTD ^= (1 << 5);
     /* toggle the LED number 7 on and then off, see NOTE01 */
     QF_INT_DISABLE();
-    PORTB |= 1 << 2;
-    PORTB &= ~ (1 << 2);
+   // PORTB |= 1 << 2;
+    //PORTB &= ~ (1 << 2);
     QF_INT_ENABLE();
 
 #ifdef NDEBUG
@@ -103,8 +103,8 @@ void QF_onIdle(void)          /* entered with interrupts LOCKED, see NOTE01 */
 {
 
     /* toggle the LED number 7 on and then off, see NOTE02 */
-    LED_ON(7);
-    LED_OFF(7);
+   // LED_ON(7);
+   // LED_OFF(7);
 
 #ifdef NDEBUG
 

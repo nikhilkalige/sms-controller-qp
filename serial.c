@@ -23,9 +23,9 @@
 
 #include "serial.h"
 #include "fifo_buffer.h"
-
+#include "softserial.h"
 /* Define the Serial BAUD Rate */
-#define BAUDRATE 115200
+#define BAUDRATE 38400
 
 //void QActive_postISR(QActive * const me, QSignal sig, QParam par);
 /* Structure for Serial Device */
@@ -42,13 +42,14 @@ typedef struct serial_dev_tag
         uint8_t *p_storage;
         uint8_t buffer_size;
         uint8_t write_ix;
+        uint8_t error_flag;
     } rx;
     struct
     {
         uint8_t *p_storage;
         uint8_t buffer_size;
         uint8_t read_ix;
-        uint8_t payload_size;
+        uint8_t *payload_size;
     } tx;
 } Serial_device;
 
@@ -61,7 +62,7 @@ ISR( USART_UDRE_vect)
 #ifdef QPK
     QK_ISR_ENTRY();
 #endif
-    if (ser_dev.tx.read_ix < ser_dev.tx.payload_size)
+    if (ser_dev.tx.read_ix < *ser_dev.tx.payload_size)
     {
         UDR0 = ser_dev.tx.p_storage[ser_dev.tx.read_ix];
         ser_dev.tx.read_ix++;
@@ -70,7 +71,7 @@ ISR( USART_UDRE_vect)
     {
         /* No bytes to send, Disable the Tx interrupt */
         ser_dev.tx.read_ix = 0;
-        ser_dev.tx.payload_size = 0;
+        *ser_dev.tx.payload_size = 0;
         UCSR0B &= ~_BV(UDRIE0);
         /* Transmission is complete, so raise the event */
 #ifdef Q_LEAPS
@@ -94,11 +95,15 @@ ISR( USART_RX_vect)
 #endif
     uint8_t byte;
     *ser_dev.p_timeout = 0;
+    byte = UCSR0A;
+    if (byte & 0x1c)
+    {
+        ser_dev.rx.error_flag = byte;
+    }
     byte = UDR0;
     if (ser_dev.rx.write_ix >= ser_dev.rx.buffer_size)
     {
         /* Raise the overflow flag */
-
     }
     else
     {
@@ -109,6 +114,63 @@ ISR( USART_RX_vect)
     QK_ISR_EXIT();
 #endif
 }
+
+
+/**
+ * Initialize the UART
+ */
+void Serial_config(void)
+{
+    UCSR0A = _BV(U2X0); //Double speed mode USART0
+    UCSR0B = _BV(TXEN0) | _BV(RXEN0); // Transmitter and Reciever enabled
+    UCSR0C = _BV(UCSZ00) | _BV(UCSZ01); // 8 bit data mode,  0 parity bits
+    UCSR0B |= _BV(RXCIE0); // Enable the reciever interrupt
+    uint16_t baud = (F_CPU / (8 * BAUDRATE)) - 1;
+    UBRR0H = baud >> 8;
+    UBRR0L = baud;
+}
+
+void Serial_enable_transmitter()
+{
+    UCSR0B |= _BV(UDRIE0);
+}
+
+void Serial_init(uint8_t *storage_rx, uint8_t size_rx, uint8_t *p_timeout_, uint8_t *storage_tx, uint8_t size_tx, uint8_t *payload_tx, QActive *my_ao)
+{
+    ser_dev.rx.p_storage = storage_rx;
+    ser_dev.rx.buffer_size = size_rx;
+    ser_dev.tx.p_storage = storage_tx;
+    ser_dev.tx.buffer_size = size_tx;
+    ser_dev.p_timeout = p_timeout_;
+    ser_dev.tx.payload_size = payload_tx;
+    ser_dev.master = my_ao;
+    ser_dev.tx.read_ix = 0;
+    ser_dev.rx.error_flag = 0;
+}
+
+uint8_t Serial_read_size()
+{
+    uint8_t size;
+    if (ser_dev.rx.error_flag)
+    {
+        Softserial_print("Error");
+        Softserial_print_byte(ser_dev.rx.error_flag);
+        Softserial_println("");
+        ser_dev.rx.error_flag = 0;
+    }
+    cli();
+    size = ser_dev.rx.write_ix;
+    sei();
+    return size;
+}
+
+void Serial_restart_rx()
+{
+    cli();
+    ser_dev.rx.write_ix = 0;
+    sei();
+}
+
 
 #if 0
 /**
@@ -159,34 +221,3 @@ int8_t Serial_SendStringNonBlocking(const char *str)
                                         (uint8_t) strlen(str));
 }
 #endif
-
-/**
- * Initialize the UART
- */
-void Serial_config(void)
-{
-    UCSR0A = _BV(U2X0); //Double speed mode USART0
-    UCSR0B = _BV(TXEN0) | _BV(RXEN0); // Transmitter and Reciever enabled
-    UCSR0C = _BV(UCSZ00) | _BV(UCSZ01); // 8 bit data mode,  0 parity bits
-    UCSR0B |= _BV(RXCIE0); // Enable the reciever interrupt
-    uint16_t baud = (F_CPU / (8 * BAUDRATE)) - 1;
-    UBRR0H = baud >> 8;
-    UBRR0L = baud;
-}
-
-void Serial_enable_transmitter()
-{
-    UCSR0B |= _BV(UDRIE0);
-}
-
-void Serial_init(uint8_t *storage_rx, uint8_t size_rx, uint8_t *p_timeout_, uint8_t *storage_tx, uint8_t size_tx, uint8_t *payload_tx, QActive *my_ao)
-{
-    ser_dev.rx.p_storage = storage_rx;
-    ser_dev.rx.buffer_size = size_rx;
-    ser_dev.tx.p_storage = storage_tx;
-    ser_dev.tx.buffer_size = size_tx;
-    ser_dev.p_timeout = p_timeout_;
-    ser_dev.tx.payload_size = payload_tx;
-    ser_dev.master = my_ao;
-}
-

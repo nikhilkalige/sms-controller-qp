@@ -6,8 +6,15 @@
 #include "gsm.h"
 #include "app.h"
 #include "com.h"
+//#include "gsm_settings.h"
 
 //extern t_fifo_buffer rx_buffer;
+
+/* Hardware Configuration */
+#define GSM_PWR_DDR     DDRB
+#define GSM_BAUD        115200
+#define GSM_PWR_PORT    PORTB
+#define GSM_PWRKEY      1
 
 static QEvt l_blinkyQueue[10];
 static QEvt l_GSMQueue[10];
@@ -42,6 +49,7 @@ int main(void)
     Softserial_println("STARTING");
     DDRD|= (1 << 7);
     PORTD |= (1 << 7);
+    //DDRB = 0xff;
    /* Softserial_print("MCUCR = ");
     Softserial_print_byte(temp);
     Softserial_println("");
@@ -56,7 +64,8 @@ int main(void)
     //Serial_SendStringNonBlocking("We are waiting for input \r\n");
     //fifoBuf_clearData(&rx_buffer);
     GSM_config(&app_mod, &com_drv);
-    Com_init(tx_buffer, 100, rx_buffer, 100);
+    Com_init(&gsm_dev, tx_buffer, 100, rx_buffer, 100);
+    //void Com_init(QActive* master, uint8_t *tx_buffer, uint8_t tx_size, uint8_t *rx_buffer, uint8_t rx_size)
     BSP_init();      /* initialize the board */
     App_ctor();
     GSM_ctor();

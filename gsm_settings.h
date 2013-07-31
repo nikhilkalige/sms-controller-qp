@@ -21,9 +21,9 @@ const uint8_t frc4[] PROGMEM = "ERROR";
 
 /* Hardware Configuration */
 #define GSM_PWR_DDR     DDRB
-#define GSM_BAUD        19200
+#define GSM_BAUD        115200
 #define GSM_PWR_PORT    PORTB
-#define GSM_PWRKEY      1
+#define GSM_PWRKEY      (1 << 1)
 
 enum frc_codes
 {
@@ -35,18 +35,19 @@ enum frc_codes
 
 enum gsm_operations
 {
-    GSM_SMS_OP = 1,
-    GSM_NETWORK_OP,
-    GSM_ACC_OP
+    GSM_OP_NONE = 1,
+    GSM_OP_SMS,
+    GSM_OP_NETWORK,
+    GSM_OP_ACC
 };
 
 enum gsm_driver_messages
 {
-    GSM_MSG_NONE,
-// general
+    GSM_MSG_NONE = 1,
+    // general
     GSM_MSG_OK,
-//GSM_MSG_AT,
-//GSM_MSG_ATE0,
+    //GSM_MSG_AT,
+    //GSM_MSG_ATE0,
     GSM_MSG_ERROR,
     GSM_MSG_ERROR_NETWORK_IS_DOWN,
     GSM_MSG_ERROR_OPERATION_FAILURE,
@@ -71,9 +72,9 @@ enum gsm_driver_messages
     GSM_MSG_NO_SOCKET_OPERATION,
     GSM_MSG_SOCKET_CONNECTING,
     GSM_MSG_SOCKET_CLOSING,
-//
+    //
     GSM_CLOCK_READ,
-//GSM_MSG_DATA_STREAM,
+    //GSM_MSG_DATA_STREAM,
     SMS_UNREAD,
     SMS_READ,
     SMS_ALL,
@@ -88,7 +89,7 @@ enum gsm_driver_messages
     GSM_MSG_SMS_LIST,
     GSM_MSG_SOCKET_NOT_READY,
     GSM_MSG_DATA_TRANSFER_STATUS,
-//GSM_MSG_GPRS_CONNECTED_STATUS_READY,
+    //GSM_MSG_GPRS_CONNECTED_STATUS_READY,
     GSM_MSG_GPRS_CONNECTED_STATUS_NOT_READY,
     GSM_MSG_GPRS_DEATTACHED,
     GSM_MSG_SIGNAL_LEVEL,
@@ -97,8 +98,8 @@ enum gsm_driver_messages
     GSM_MSG_ERROR_GPTS_NOT_ALLOWED,
     GSM_MSG_CONTEXT_STATUS,
     GSM_MSG_APP_PAYLOAD_AVAILABLE,
-//
-// gsm internal state machine
+    //
+    // gsm internal state machine
     // power
     GSM_MSG_POWER_DOWN_REQUEST_ACKNOWLOGED,
     GSM_MSG_POWER_DOWN_PROCESSING,
@@ -127,83 +128,83 @@ struct at_response_code
 
 struct at_response_code frc_table[] =
 {
-    (uint8_t*)"OK", EVENT_GSM_ACK_RESPONSE,GSM_MSG_ERROR,
-    (uint8_t*)"+CMS ERROR:", EVENT_GSM_ERROR_RESPONSE, GSM_MSG_ERROR,
-    (uint8_t*)"+CME ERROR:", EVENT_GSM_ERROR_RESPONSE,GSM_MSG_ERROR,
-    (uint8_t*)"ERROR", EVENT_GSM_ERROR_RESPONSE,GSM_MSG_ERROR,
+    (uint8_t *)"OK", EVENT_GSM_ACK_RESPONSE, GSM_MSG_ERROR,
+    (uint8_t *)"+CMS ERROR:", EVENT_GSM_ERROR_RESPONSE, GSM_MSG_ERROR,
+    (uint8_t *)"+CME ERROR:", EVENT_GSM_ERROR_RESPONSE, GSM_MSG_ERROR,
+    (uint8_t *)"ERROR", EVENT_GSM_ERROR_RESPONSE, GSM_MSG_ERROR,
     // array terminator !!!
-    (uint8_t*) 0, 0, 0
+    (uint8_t *) 0, 0, 0
 };
 
 struct at_response_code sms_table[] =
 {
-    (uint8_t*)">", EVENT_GSM_SMS_RESPONSE, GSM_MSG_SMS_PROMPT,
-    (uint8_t*)"+CMGS:", EVENT_GSM_SMS_RESPONSE, GSM_MSG_SMS_QUEUED,
-    (uint8_t*)"+CMGR: \"REC UNREAD\"", EVENT_GSM_SMS_RESPONSE, GSM_MSG_SMS_REC_UNREAD,
-    (uint8_t*)"+CMGR: \"REC READ\"", EVENT_GSM_SMS_RESPONSE, GSM_MSG_SMS_REC_READ,
-    (uint8_t*)"+CMGR:", EVENT_GSM_SMS_RESPONSE,  GSM_MSG_SMS_UNKOWN_MESAGE,
-    (uint8_t*)"+CMGL:", EVENT_GSM_SMS_RESPONSE,GSM_MSG_SMS_LIST,
+    (uint8_t *)">", EVENT_GSM_SMS_RESPONSE, GSM_MSG_SMS_PROMPT,
+    (uint8_t *)"+CMGS:", EVENT_GSM_SMS_RESPONSE, GSM_MSG_SMS_QUEUED,
+    (uint8_t *)"+CMGR: \"REC UNREAD\"", EVENT_GSM_SMS_RESPONSE, GSM_MSG_SMS_REC_UNREAD,
+    (uint8_t *)"+CMGR: \"REC READ\"", EVENT_GSM_SMS_RESPONSE, GSM_MSG_SMS_REC_READ,
+    (uint8_t *)"+CMGR:", EVENT_GSM_SMS_RESPONSE,  GSM_MSG_SMS_UNKOWN_MESAGE,
+    (uint8_t *)"+CMGL:", EVENT_GSM_SMS_RESPONSE, GSM_MSG_SMS_LIST,
     // array terminator !!!
-    (uint8_t*) 0, 0, 0
+    (uint8_t *) 0, 0, 0
 };
 
 struct at_response_code acc_table[] =
 {
-	(uint8_t*)"+CCLK:", EVENT_GSM_CLOCK_RESPONSE, GSM_CLOCK_READ,
-	// array terminator !!!
-    (uint8_t*) 0, 0, 0
+    (uint8_t *)"+CCLK:", EVENT_GSM_CLOCK_RESPONSE, GSM_CLOCK_READ,
+    // array terminator !!!
+    (uint8_t *) 0, 0, 0
 };
 
 struct at_response_code network_table[] =
 {
-    (uint8_t*)"+CREG: 0,0", EVENT_GSM_NETWORK_RESPONSE, GSM_MSG_CREG_NEWTWORK_SEARCHING_IN_IDLE,
-    (uint8_t*)"+CREG: 0,1", EVENT_GSM_NETWORK_RESPONSE, GSM_MSG_CREG_NETWORK_READY_LOCAL,
-    (uint8_t*)"+CREG: 0,2", EVENT_GSM_NETWORK_RESPONSE, GSM_MSG_CREG_SEARCHING_NETWORK,
-    (uint8_t*)"+CREG: 0,3", EVENT_GSM_NETWORK_RESPONSE, GSM_MSG_CREG_NETWORK_ACCESS_DENIED,
-    (uint8_t*)"+CREG: 0,5", EVENT_GSM_NETWORK_RESPONSE, GSM_MSG_CREG_NETWORK_READY_ROAMING,
-    (uint8_t*)"+CGATT: 0", EVENT_GSM_NETWORK_RESPONSE, GSM_MSG_NETWORK_NOT_ATTACHED,
-    (uint8_t*)"+CGATT: 1", EVENT_GSM_NETWORK_RESPONSE, GSM_MSG_NETWORK_ATTACHED,
+    (uint8_t *)"+CREG: 0,0", EVENT_GSM_NETWORK_RESPONSE, GSM_MSG_CREG_NEWTWORK_SEARCHING_IN_IDLE,
+    (uint8_t *)"+CREG: 0,1", EVENT_GSM_NETWORK_RESPONSE, GSM_MSG_CREG_NETWORK_READY_LOCAL,
+    (uint8_t *)"+CREG: 0,2", EVENT_GSM_NETWORK_RESPONSE, GSM_MSG_CREG_SEARCHING_NETWORK,
+    (uint8_t *)"+CREG: 0,3", EVENT_GSM_NETWORK_RESPONSE, GSM_MSG_CREG_NETWORK_ACCESS_DENIED,
+    (uint8_t *)"+CREG: 0,5", EVENT_GSM_NETWORK_RESPONSE, GSM_MSG_CREG_NETWORK_READY_ROAMING,
+    (uint8_t *)"+CGATT: 0", EVENT_GSM_NETWORK_RESPONSE, GSM_MSG_NETWORK_NOT_ATTACHED,
+    (uint8_t *)"+CGATT: 1", EVENT_GSM_NETWORK_RESPONSE, GSM_MSG_NETWORK_ATTACHED,
     // array terminator !!!
-    (uint8_t*) 0, 0,0
+    (uint8_t *) 0, 0, 0
 };
 
 const uint8_t *module_init_table[] =
 {
-    (uint8_t*)"ATE0\r\n",
+    (uint8_t *)"ATE0\r\n",
     /* SMS Related */
-    (uint8_t*)"AT+CNMI=2,1\r\n",
-    (uint8_t*)"AT+CMGF=1",
-    (uint8_t*)"AT+CPMS=\"SM\",\"SM\",\"SM\"",
-    (uint8_t*)""
+    (uint8_t *)"AT+CNMI=2,1\r\n",
+    (uint8_t *)"AT+CMGF=1\r\n",
+    (uint8_t *)"AT+CPMS=\"SM\",\"SM\",\"SM\"\r\n",
+    (uint8_t *)""
 };
 
-PROGMEM const char  READY []= "Call Ready";
+PROGMEM const char  READY [] = "Call Ready";
 PROGMEM const char   ATE_0[] = "ATE0";
 PROGMEM const char   AT_IPR_115200[] = "AT+IPR=115200";
 PROGMEM const char   AT_IPR_19200[] = "AT+IPR=19200";
-PROGMEM const char   CREG []= "AT+CREG?\r";
-PROGMEM const char   CREG_1 []= "+CREG: 0,1";
-PROGMEM const char   CREG_2 []= "+CREG: 0,5";
-PROGMEM const char   CMGS []= "AT+CMGS=\"";
-PROGMEM const char   _CMGS []= "+CMGS";
-PROGMEM const char   CNMI []= "AT+CNMI=2,1";
-PROGMEM const char   CMGF []= "AT+CMGF=1";
-PROGMEM const char   CPMS []= "AT+CPMS=\"SM\",\"SM\",\"SM\"";
-PROGMEM const char   _CPMS []= "+CPMS";
-PROGMEM const char   CPMS_REQ[]= "AT+CPMS?";
-PROGMEM const char   CMGL_UNREAD []= "AT+CMGL=\"REC UNREAD\"\r";
-PROGMEM const char   CMGL_READ []= "AT+CMGL=\"REC READ\"\r";
-PROGMEM const char   CMGL_ALL []= "AT+CMGL=\"ALL\"\r";
-PROGMEM const char   _CMGL []= "+CMGL:";
-PROGMEM const char   CMGR []= "AT+CMGR=";
-PROGMEM const char   _CMGR []= "+CMGR";
-PROGMEM const char   ERROR []= "ERROR";
-PROGMEM const char   UNREAD []= "\"REC UNREAD\"";
-PROGMEM const char   READ []= "\"REC READ\"";
-PROGMEM const char   CMGD []= "AT+CMGD=";
+PROGMEM const char   CREG [] = "AT+CREG?\r";
+PROGMEM const char   CREG_1 [] = "+CREG: 0,1";
+PROGMEM const char   CREG_2 [] = "+CREG: 0,5";
+PROGMEM const char   CMGS [] = "AT+CMGS=\"";
+PROGMEM const char   _CMGS [] = "+CMGS";
+PROGMEM const char   CNMI [] = "AT+CNMI=2,1";
+PROGMEM const char   CMGF [] = "AT+CMGF=1";
+PROGMEM const char   CPMS [] = "AT+CPMS=\"SM\",\"SM\",\"SM\"";
+PROGMEM const char   _CPMS [] = "+CPMS";
+PROGMEM const char   CPMS_REQ[] = "AT+CPMS?";
+PROGMEM const char   CMGL_UNREAD [] = "AT+CMGL=\"REC UNREAD\"\r";
+PROGMEM const char   CMGL_READ [] = "AT+CMGL=\"REC READ\"\r";
+PROGMEM const char   CMGL_ALL [] = "AT+CMGL=\"ALL\"\r";
+PROGMEM const char   _CMGL [] = "+CMGL:";
+PROGMEM const char   CMGR [] = "AT+CMGR=";
+PROGMEM const char   _CMGR [] = "+CMGR";
+PROGMEM const char   ERROR [] = "ERROR";
+PROGMEM const char   UNREAD [] = "\"REC UNREAD\"";
+PROGMEM const char   READ [] = "\"REC READ\"";
+PROGMEM const char   CMGD [] = "AT+CMGD=";
 PROGMEM const char   CCLK[] = "AT+CCLK=";
-PROGMEM const char   CCLK_REQ []= "AT+CCLK?";
-PROGMEM const char  _CCLK []= "+CCLK";
-PROGMEM const char  CMGDA[]= "AT+CMGDA=\"DEL ALL\"";
+PROGMEM const char   CCLK_REQ [] = "AT+CCLK?";
+PROGMEM const char  _CCLK [] = "+CCLK";
+PROGMEM const char  CMGDA[] = "AT+CMGDA=\"DEL ALL\"";
 
-#endif					/* gsm_settings.h */
+#endif                  /* gsm_settings.h */
