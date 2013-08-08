@@ -40,7 +40,7 @@ enum gsm_operations
     GSM_OP_NETWORK,
     GSM_OP_ACC
 };
-
+#if 0
 enum gsm_driver_messages
 {
     GSM_MSG_NONE = 1,
@@ -111,7 +111,7 @@ enum gsm_driver_messages
     GSM_MSG_NETWORK_NOT_ATTACHED,
     GSM_MSG_NETWORK_ATTACHED
 };
-
+#endif
 typedef struct final_result_codes_t
 {
     uint8_t *p_string;
@@ -138,7 +138,7 @@ struct at_response_code frc_table[] =
 
 struct at_response_code sms_table[] =
 {
-    (uint8_t *)">", EVENT_GSM_SMS_RESPONSE, GSM_MSG_SMS_PROMPT,
+    (uint8_t *)"> ", EVENT_GSM_SMS_RESPONSE, GSM_MSG_SMS_PROMPT,
     (uint8_t *)"+CMGS:", EVENT_GSM_SMS_RESPONSE, GSM_MSG_SMS_QUEUED,
     (uint8_t *)"+CMGR: \"REC UNREAD\"", EVENT_GSM_SMS_RESPONSE, GSM_MSG_SMS_REC_UNREAD,
     (uint8_t *)"+CMGR: \"REC READ\"", EVENT_GSM_SMS_RESPONSE, GSM_MSG_SMS_REC_READ,
@@ -146,6 +146,12 @@ struct at_response_code sms_table[] =
     (uint8_t *)"+CMGL:", EVENT_GSM_SMS_RESPONSE, GSM_MSG_SMS_LIST,
     // array terminator !!!
     (uint8_t *) 0, 0, 0
+};
+
+/* To accomodate those which donot have a closing \r\n */
+struct at_response_code special_table[] =
+{
+    (uint8_t *)"> ", EVENT_GSM_SMS_RESPONSE, GSM_MSG_SMS_PROMPT
 };
 
 struct at_response_code acc_table[] =
@@ -182,7 +188,7 @@ PROGMEM const char  READY [] = "Call Ready";
 PROGMEM const char   ATE_0[] = "ATE0";
 PROGMEM const char   AT_IPR_115200[] = "AT+IPR=115200";
 PROGMEM const char   AT_IPR_19200[] = "AT+IPR=19200";
-PROGMEM const char   CREG [] = "AT+CREG?\r";
+PROGMEM const char   CREG [] = "AT+CREG?\r\n";
 PROGMEM const char   CREG_1 [] = "+CREG: 0,1";
 PROGMEM const char   CREG_2 [] = "+CREG: 0,5";
 PROGMEM const char   CMGS [] = "AT+CMGS=\"";
@@ -192,9 +198,9 @@ PROGMEM const char   CMGF [] = "AT+CMGF=1";
 PROGMEM const char   CPMS [] = "AT+CPMS=\"SM\",\"SM\",\"SM\"";
 PROGMEM const char   _CPMS [] = "+CPMS";
 PROGMEM const char   CPMS_REQ[] = "AT+CPMS?";
-PROGMEM const char   CMGL_UNREAD [] = "AT+CMGL=\"REC UNREAD\"\r";
-PROGMEM const char   CMGL_READ [] = "AT+CMGL=\"REC READ\"\r";
-PROGMEM const char   CMGL_ALL [] = "AT+CMGL=\"ALL\"\r";
+PROGMEM const char   CMGL_UNREAD [] = "AT+CMGL=\"REC UNREAD\"\r\n";
+PROGMEM const char   CMGL_READ [] = "AT+CMGL=\"REC READ\"\r\n";
+PROGMEM const char   CMGL_ALL [] = "AT+CMGL=\"ALL\"\r\n";
 PROGMEM const char   _CMGL [] = "+CMGL:";
 PROGMEM const char   CMGR [] = "AT+CMGR=";
 PROGMEM const char   _CMGR [] = "+CMGR";
@@ -203,8 +209,8 @@ PROGMEM const char   UNREAD [] = "\"REC UNREAD\"";
 PROGMEM const char   READ [] = "\"REC READ\"";
 PROGMEM const char   CMGD [] = "AT+CMGD=";
 PROGMEM const char   CCLK[] = "AT+CCLK=";
-PROGMEM const char   CCLK_REQ [] = "AT+CCLK?\r";
+PROGMEM const char   CCLK_REQ [] = "AT+CCLK?\r\n";
 PROGMEM const char  _CCLK [] = "+CCLK";
-PROGMEM const char  CMGDA[] = "AT+CMGDA=\"DEL ALL\"";
+PROGMEM const char  CMGDA[] = "AT+CMGDA=\"DEL ALL\"\r\n";
 
 #endif                  /* gsm_settings.h */
