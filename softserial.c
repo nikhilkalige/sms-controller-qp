@@ -278,7 +278,7 @@ void Softserial_println_flash(const char *s)
     send_byte('\n');
 }
 
-void Softserial_print_byte(uint8_t n)
+void Softserial_print_byte(uint16_t n)
 {
   printNumber((uint16_t)n, 10);
 }

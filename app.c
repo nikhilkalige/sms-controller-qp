@@ -11,6 +11,7 @@
 #include "app.h"
 #include "gsm.h"
 #include "softserial.h"
+#include "emon.h"
 
 //App app_mod;
 
@@ -42,6 +43,15 @@ static QState initiate_app(App *const me)
     return Q_TRAN(&init);
 }
 
+
+
+
+
+
+
+uint8_t num = 0;
+
+
 static QState init(App *const me)
 {
     switch (Q_SIG(me))
@@ -50,7 +60,7 @@ static QState init(App *const me)
         {
             QActive_post((QActive *)&gsm_dev, EVENT_SYSTEM_START_AO, 0);
             Softserial_println("INIT APP TIME");
-            QActive_arm((QActive *)me, 5 sec);
+            QActive_arm((QActive *)me, 1 sec);
             return Q_HANDLED();
         }
         case Q_INIT_SIG:
@@ -60,8 +70,47 @@ static QState init(App *const me)
         case Q_TIMEOUT_SIG:
         {
             Softserial_println("INIT APP T RECIEVED");
+            /* Added for emon test */
+            QActive_post((QActive *)&emon_dev, EVENT_EMON_READ_ENTITY, 0);
+#if 0
             QActive_post((QActive *)&gsm_dev, EVENT_SYSTEM_GSM_INIT, 0);
             //QActive_arm((QActive *)me, 1 sec);
+#endif
+            return Q_HANDLED();
+        }
+        case EVENT_EMON_MEASUREMENT_DONE:
+        {
+            if (!num)
+            {
+                Softserial_print("Vrms - ");
+                Softserial_print_byte((uint16_t)Q_PAR(me));
+                QActive_post((QActive *)&emon_dev, EVENT_EMON_READ_ENTITY, 1);
+
+                num++;
+            }
+            else if (num == 1)
+            {
+                Softserial_print("\t");
+                Softserial_print_byte((uint16_t)Q_PAR(me));
+                QActive_post((QActive *)&emon_dev, EVENT_EMON_READ_ENTITY, 2);
+                num++;
+            }
+            else if (num == 2)
+            {
+                Softserial_print("\t");
+                Softserial_print_byte((uint16_t)Q_PAR(me));
+                Softserial_println("");
+                QActive_post((QActive *)&emon_dev, EVENT_EMON_READ_ENTITY, 6);
+                num++;
+            }
+            else if (num == 3)
+            {
+                Softserial_print("Irms - ");
+                Softserial_print_byte((uint16_t)Q_PAR(me));
+                Softserial_println("");
+                QActive_post((QActive *)&emon_dev, EVENT_EMON_READ_ENTITY, 0);
+                num++;
+            }
             return Q_HANDLED();
         }
         case EVENT_GSM_INIT_DONE:
@@ -152,11 +201,11 @@ static QState active(App *const me)
         }
         case EVENT_GSM_SMS_READ_DONE:
         {
-            temp = strlen((char*)me->buffer);
+            temp = strlen((char *)me->buffer);
             Softserial_println("SMS Read");
-            Softserial_print((char*)me->buffer);
+            Softserial_print((char *)me->buffer);
             Softserial_print("----");
-            Softserial_println((char*)(me->buffer + temp + 1));
+            Softserial_println((char *)(me->buffer + temp + 1));
             return Q_HANDLED();
         }
         case EVENT_GSM_SMS_DELETE_DONE:
@@ -176,7 +225,7 @@ static QState active(App *const me)
         {
             Softserial_println("time read success");
             Softserial_println((char *)me->buffer);
-            strcpy((char*)me->buffer, "\"13/08/03,19:32:00+10\"");
+            strcpy((char *)me->buffer, "\"13/08/03,19:32:00+10\"");
             QActive_post((QActive *)&gsm_dev, EVENT_GSM_CLOCK_SET, 0);
             return Q_HANDLED();
         }

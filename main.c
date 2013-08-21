@@ -6,6 +6,8 @@
 #include "gsm.h"
 #include "app.h"
 #include "com.h"
+#include "emon.h"
+
 //#include "gsm_settings.h"
 
 //extern t_fifo_buffer rx_buffer;
@@ -20,6 +22,7 @@ static QEvt l_blinkyQueue[10];
 static QEvt l_GSMQueue[10];
 static QEvt l_ComQueue[10];
 static QEvt l_AppQueue[10];
+static QEvt l_emonQueue[10];
 /* QF_active[] array defines all active object control blocks --------------*/
 
 QActiveCB const Q_ROM Q_ROM_VAR QF_active[] =
@@ -28,6 +31,7 @@ QActiveCB const Q_ROM Q_ROM_VAR QF_active[] =
     { (QActive *) &gsm_dev, l_GSMQueue, Q_DIM(l_GSMQueue)},
     { (QActive *) &app_mod, l_AppQueue, Q_DIM(l_AppQueue)},
     { (QActive *) &com_drv, l_ComQueue, Q_DIM(l_ComQueue)},
+    { (QActive *) &emon_dev, l_emonQueue, Q_DIM(l_emonQueue)},
 };
 
 /* make sure that the QF_active[] array matches QF_MAX_ACTIVE in qpn_port.h */
@@ -64,12 +68,14 @@ int main(void)
     //Serial_SendStringNonBlocking("We are waiting for input \r\n");
     //fifoBuf_clearData(&rx_buffer);
     GSM_config(&app_mod, &com_drv);
-    Com_init(&gsm_dev, tx_buffer, 100, rx_buffer, 100);
+    Com_init((QActive*)&gsm_dev, tx_buffer, 100, rx_buffer, 100);
+    emon_config((QActive*)&app_mod);
     //void Com_init(QActive* master, uint8_t *tx_buffer, uint8_t tx_size, uint8_t *rx_buffer, uint8_t rx_size)
     BSP_init();      /* initialize the board */
     App_ctor();
     GSM_ctor();
     Com_ctor();
+    emon_ctor();
     Softserial_println("ALL SYSTEMS INITIALIZED");
     //Serial_print_string("Hi Lonewolf, we are ready to hunt \r\n");
     //Serial_print_string_flash(test_string);

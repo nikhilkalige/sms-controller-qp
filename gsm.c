@@ -396,7 +396,7 @@ static void sms_send_command()
     length = strlen((char *)gsm_dev.control.master_buffer);
     send_command_timeout((uint8_t *)CMGS, 0, 1);
     send_command((uint8_t *)gsm_dev.control.master_buffer, 0);
-    send_command((uint8_t*)"\"\r\n", 0);
+    send_command((uint8_t *)"\"\r\n", 0);
     gsm_dev.control.master_buffer = gsm_dev.control.master_buffer + (length + 1);
 }
 
@@ -1027,11 +1027,13 @@ static QState active_time_get(Gsm *const me)
         case EVENT_GSM_CLOCK_RESPONSE:
         {
             me->control.response = (uint8_t)(Q_PAR(me) >> 16);
+#if 0
             Softserial_print("clock event id= ");
             Softserial_print_byte(me->control.response);
             Softserial_println("");
+#endif
             //me->control.response = (uint8_t)Q_PAR(me);
-            msg = (uint8_t*)Q_PAR(me);
+            msg = (uint8_t *)Q_PAR(me);
             // +CCLK: "YY/MM/DD,HH:MM:SS+/-ZZ"
             //<CR><LF>OK<CR><LF>
             //
@@ -1046,14 +1048,11 @@ static QState active_time_get(Gsm *const me)
             if (p_char != NULL)
             {
                 *(p_char - 3) = 0;
-                strcpy((char*)me->control.master_buffer, (char*)msg);
+                strcpy((char *)me->control.master_buffer, (char *)msg);
                 return Q_HANDLED();
             }
             /* TODO : issue present here */
-            else
-            {
-                return Q_TRAN(&active_idle);
-            }
+            return Q_TRAN(&active_idle);
         }
         case EVENT_GSM_ACK_RESPONSE:
         {
@@ -1159,7 +1158,7 @@ static QState active_sms_read(Gsm *const me)
                 <CR><LF>+CMGR: "REC READ","+XXXXXXXXXXXX",,"02/03/18,09:54:28+40"<CR><LF>
                 There is SMS text<CR><LF>*/
 
-                p_char = (uint8_t*)Q_PAR(me);
+                p_char = (uint8_t *)Q_PAR(me);
                 p_char = memchr(p_char, ',', 23);
                 p_char1 = p_char + 2;
                 p_char = memchr(p_char1, '"', 15);

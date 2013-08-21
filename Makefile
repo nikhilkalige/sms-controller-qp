@@ -61,10 +61,12 @@ TARGET = main
 
 # List C source files here. (C dependencies are automatically generated.)
 SRC = $(TARGET).c \
+	adc.c \
 	app.c \
 	bsp.c \
 	com.c \
 	debug.c \
+	emon.c \
 	fifo_buffer.c \
 	gsm.c \
 	serial.c \
