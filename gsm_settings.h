@@ -128,7 +128,8 @@ struct at_response_code
 
 struct at_response_code frc_table[] =
 {
-    (uint8_t *)"OK", EVENT_GSM_ACK_RESPONSE, GSM_MSG_ERROR,
+    (uint8_t *)"OK", EVENT_GSM_ACK_RESPONSE, GSM_MSG_OK,
+    (uint8_t *)"+CMTI:", EVENT_GSM_SMS_RECIEVE_URC, 0,
     (uint8_t *)"+CMS ERROR:", EVENT_GSM_ERROR_RESPONSE, GSM_MSG_ERROR,
     (uint8_t *)"+CME ERROR:", EVENT_GSM_ERROR_RESPONSE, GSM_MSG_ERROR,
     (uint8_t *)"ERROR", EVENT_GSM_ERROR_RESPONSE, GSM_MSG_ERROR,
@@ -181,6 +182,7 @@ const uint8_t *module_init_table[] =
     (uint8_t *)"AT+CNMI=2,1\r\n",
     (uint8_t *)"AT+CMGF=1\r\n",
     (uint8_t *)"AT+CPMS=\"SM\",\"SM\",\"SM\"\r\n",
+    (uint8_t *)"AT+CMGDA=\"DEL ALL\"\r\n",
     (uint8_t *)""
 };
 

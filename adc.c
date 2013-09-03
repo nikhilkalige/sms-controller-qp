@@ -1,6 +1,17 @@
+/**
+ ******************************************************************************
+ *
+ * @file       adc.c
+ * @author     Lonewolf
+ * @brief      ADC Driver
+ * @see        The GNU Public License (GPL) Version 3
+ *
+ *****************************************************************************/
+ 
 #include "adc.h"
 #include "settings.h"
 #include "softserial.h"
+
 adc_dev_config adc_dev;
 
 void adc_enable_interrupt()

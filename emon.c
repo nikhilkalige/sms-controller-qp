@@ -1,3 +1,15 @@
+/**
+ ******************************************************************************
+ *
+ * @file         emon.c
+ * @author    Lonewolf
+ * @brief      Energy Monitor Library
+ * @see        The GNU Public License (GPL) Version 3
+ *
+ * Based on code from:
+ * Created by Trystan Lea, April 27 2010
+ *****************************************************************************/
+
 #include "math.h"
 #include "emon.h"
 #include "adc.h"

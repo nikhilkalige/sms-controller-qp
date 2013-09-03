@@ -66,6 +66,7 @@ SRC = $(TARGET).c \
 	bsp.c \
 	com.c \
 	debug.c \
+	edb.c \
 	emon.c \
 	fifo_buffer.c \
 	gsm.c \

@@ -14,5 +14,6 @@
 #include "settings.h"
 
 uint16_t ascii_to_integer(uint8_t * data);
+void convert_uppercase(char *string);
 
 #endif                 /* util.h */

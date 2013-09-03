@@ -1,8 +1,14 @@
-/*
-  Emon.h - Library for openenergymonitor
-  Created by Trystan Lea, April 27 2010
-  GNU GPL
-*/
+/**
+ ******************************************************************************
+ *
+ * @file       emon.h
+ * @author     Lonewolf
+ * @brief      Energy Monitor Header
+ * @see        The GNU Public License (GPL) Version 3
+ *
+ * Based on code from:
+ * Created by Trystan Lea, April 27 2010
+ *****************************************************************************/
 
 #ifndef EMON_H
 #define EMON_H

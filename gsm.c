@@ -34,6 +34,8 @@ typedef struct Gsm_tag
         uint8_t busy;
         uint8_t timeout;
         uint8_t *master_buffer;
+        uint8_t *phone_no;
+        uint8_t *mssg_buf;
     } control;
 } Gsm;
 
@@ -90,6 +92,9 @@ static QState active_sms_delete(Gsm *const me);
 static QState active_sms_send(Gsm *const me);
 static QState active_sms_read(Gsm *const me);
 static QState active_sms_presence(Gsm *const me);
+static QState active_sms_extract_time(Gsm *const me);
+static QState active_sms_extract_mssg(Gsm *const me);
+
 
 static QState init_inactive(Gsm *const me);
 static QState init_powering_on(Gsm *const me);
@@ -119,6 +124,8 @@ void GSM_config(App *master, Com *com_drv)
     gsm_dev.p_comm = com_drv;
     gsm_dev.control.current_op = 0;
     gsm_dev.control.master_buffer = master->buffer;
+    gsm_dev.control.phone_no = master->current_phone_no;
+    gsm_dev.control.mssg_buf = master->mssg_buf;
 }
 
 /************************************************************************************************************************************
@@ -392,12 +399,17 @@ static void network_status_read_command()
 
 static void sms_send_command()
 {
+#if 0
     uint8_t length;
     length = strlen((char *)gsm_dev.control.master_buffer);
     send_command_timeout((uint8_t *)CMGS, 0, 1);
     send_command((uint8_t *)gsm_dev.control.master_buffer, 0);
     send_command((uint8_t *)"\"\r\n", 0);
     gsm_dev.control.master_buffer = gsm_dev.control.master_buffer + (length + 1);
+#endif
+    send_command_timeout((uint8_t *)CMGS, 0, 1);
+    send_command((uint8_t *)gsm_dev.control.phone_no, 0);
+    send_command((uint8_t *)"\"\r\n", 0);
 }
 
 static void sms_delete_command(uint8_t *pos)
@@ -713,6 +725,7 @@ static QState active_super(Gsm *const me)
 
 static QState active_idle(Gsm *const me)
 {
+    Softserial_println("state:gsm idle");
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
@@ -737,8 +750,35 @@ static QState active_idle(Gsm *const me)
                 return Q_TRAN(&active_network_status);
             }
         }
+        case EVENT_GSM_SMS_READ_EXTRACT_MSSG:
+        {
+            if (me->control.busy)
+            {
+                QActive_post((QActive *)me->master, EVENT_GSM_BUSY, 0);
+                return Q_HANDLED();
+            }
+            else
+            {
+                me->control.response = (uint8_t)Q_PAR(me);
+                return Q_TRAN(&active_sms_extract_mssg);
+            }
+        }
+        case EVENT_GSM_SMS_READ_EXTRACT_TIME:
+        {
+            if (me->control.busy)
+            {
+                QActive_post((QActive *)me->master, EVENT_GSM_BUSY, 0);
+                return Q_HANDLED();
+            }
+            else
+            {
+                me->control.response = 1;
+                return Q_TRAN(&active_sms_extract_time);
+            }
+        }
         case EVENT_GSM_SMS_READ_REQUEST:
         {
+            Softserial_println("read request");
             if (me->control.busy)
             {
                 QActive_post((QActive *)me->master, EVENT_GSM_BUSY, 0);
@@ -811,6 +851,11 @@ static QState active_idle(Gsm *const me)
                 me->control.response = (uint8_t)Q_PAR(me);
                 return Q_TRAN(&active_sms_presence);
             }
+        }
+        case EVENT_GSM_SMS_RECIEVE_URC:
+        {
+            QActive_post((QActive *)me->master, EVENT_GSM_SMS_NEW_RECIEVED, 0);
+            return Q_HANDLED();
         }
         case Q_EXIT_SIG:
         {
@@ -931,7 +976,10 @@ static QState active_sms_send(Gsm *const me)
             if (me->control.response == GSM_MSG_SMS_PROMPT)
             {
                 QActive_disarm((QActive *)me);
+#if 0
                 send_command_timeout(me->control.master_buffer, 0, 0);
+#endif
+                send_command_timeout(me->control.mssg_buf, 0, 0);
                 *me->control.master_buffer = 0x1A;
                 *(me->control.master_buffer + 1) = 0;
                 send_command_timeout(me->control.master_buffer, 5 sec, 0);
@@ -1125,14 +1173,14 @@ static QState active_sms_presence(Gsm *const me)
 
 static QState active_sms_read(Gsm *const me)
 {
-    uint8_t *p_char;
-    uint8_t *p_char1;
-    uint8_t len;
     uint8_t index[3];
+    char* p_char;
+    char* p_char1;
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
         {
+            Softserial_println("reading");
             me->control.busy = true;
             me->control.current_op = GSM_OP_SMS;
             if (me->control.response)
@@ -1146,6 +1194,144 @@ static QState active_sms_read(Gsm *const me)
         case Q_INIT_SIG:
         {
             return Q_HANDLED();
+        }
+#if 1
+        case EVENT_GSM_SMS_RESPONSE:
+        {
+            me->control.response = (uint8_t)(Q_PAR(me) >> 16);
+            if ((me->control.response == GSM_MSG_SMS_REC_READ) || (me->control.response == GSM_MSG_SMS_REC_UNREAD))
+            {
+                /* response for new SMS:
+                <CR><LF>+CMGR: "REC UNREAD","+XXXXXXXXXXXX",,"02/03/18,09:54:28+40"<CR><LF>
+                There is SMS text<CR><LF>OK<CR><LF>
+                <CR><LF>+CMGR: "REC READ","+XXXXXXXXXXXX",,"02/03/18,09:54:28+40"<CR><LF>
+                There is SMS text<CR><LF>*/
+
+                p_char = (uint8_t *)Q_PAR(me);
+                p_char = memchr(p_char, ',', 23);
+                p_char1 = p_char + 2;
+                p_char = memchr(p_char1, '"', 15);
+                if (p_char == NULL)
+                {
+                    return Q_HANDLED();
+                }
+                *p_char = 0;
+                //strcpy((char *)me->control.master_buffer, (char *)p_char1);
+                strcpy((char*)me->control.phone_no, (char*)p_char1);
+                //len = strlen((char *)p_char1);
+                p_char = memchr(p_char + 1, '\n', 29);
+                if (p_char == NULL)
+                {
+                    return Q_HANDLED();
+                }
+                p_char++;
+                p_char1 = memchr((char *)(p_char), 0x0d, 130);
+                if (p_char1 != NULL)
+                {
+                    // finish the SMS text string
+                    // because string must be finished for right behaviour
+                    // of next strcpy() function
+                    *p_char1 = 0;
+                    //p_char1 = me->control.master_buffer + len + 1;
+                    strcpy((char *)me->control.mssg_buf, (char *)(p_char));
+                }
+            }
+            return Q_HANDLED();
+        }
+#endif
+        case Q_TIMEOUT_SIG:
+        {
+            QActive_post((QActive *)me->master, EVENT_GSM_MODULE_FAILURE, 0);
+            return Q_TRAN(&active_idle);
+        }
+        case EVENT_GSM_ACK_RESPONSE:
+        {
+            Softserial_println("reading ack");
+            if (me->control.response)
+            {
+                QActive_post((QActive *)me->master, EVENT_GSM_SMS_READ_DONE, 0);
+            }
+            else
+            {
+                QActive_post((QActive *)me->master, EVENT_GSM_MODULE_FAILURE, 0);
+            }
+            return Q_TRAN(&active_idle);
+        }
+        case Q_EXIT_SIG:
+        {
+            generic_exit_operations();
+            return Q_HANDLED();
+        }
+    }
+    return Q_SUPER(&active_super);
+}
+
+static QState active_sms_extract_time(Gsm *const me)
+{
+    uint8_t *p_char;
+    uint8_t *p_char1;
+    switch (Q_SIG(me))
+    {
+        case Q_ENTRY_SIG:
+        {
+            return Q_HANDLED();
+        }
+        case Q_INIT_SIG:
+        {
+            return Q_TRAN(&active_sms_read);
+        }
+        case EVENT_GSM_SMS_RESPONSE:
+        {
+            me->control.response = (uint8_t)(Q_PAR(me) >> 16);
+            if ((me->control.response == GSM_MSG_SMS_REC_READ) || (me->control.response == GSM_MSG_SMS_REC_UNREAD))
+            {
+                /* response for new SMS:
+                <CR><LF>+CMGR: "REC UNREAD","+XXXXXXXXXXXX",,"02/03/18,09:54:28+40"<CR><LF>
+                There is SMS text<CR><LF>OK<CR><LF>
+                <CR><LF>+CMGR: "REC READ","+XXXXXXXXXXXX",,"02/03/18,09:54:28+40"<CR><LF>
+                There is SMS text<CR><LF>*/
+
+                p_char = (uint8_t *)Q_PAR(me);
+                p_char = memchr(p_char, ',', 23);
+                p_char = memchr(p_char, ',', 23);
+                if (*(p_char + 1) == ',')
+                {
+                    p_char += 2;
+                    p_char1 = memchr(p_char, '"', 22);
+                    if (p_char1 == NULL)
+                    {
+                        QActive_post((QActive *)me->master, EVENT_GSM_PARSING_ERROR, 0);
+                        return Q_HANDLED();
+                    }
+                    *(p_char1 + 1) = 0; // end of string
+                    p_char--;
+                }
+                strcpy((char *)me->control.master_buffer, (char *)p_char);
+            }
+            return Q_HANDLED();
+        }
+        case Q_EXIT_SIG:
+        {
+            return Q_HANDLED();
+        }
+    }
+    return Q_SUPER(&active_idle);
+}
+
+static QState active_sms_extract_mssg(Gsm *const me)
+{
+    uint8_t *p_char;
+    uint8_t *p_char1;
+    uint8_t len;
+    switch (Q_SIG(me))
+    {
+        case Q_ENTRY_SIG:
+        {
+            return Q_HANDLED();
+        }
+        case Q_INIT_SIG:
+        {
+            return Q_TRAN(&active_sms_read);
         }
         case EVENT_GSM_SMS_RESPONSE:
         {
@@ -1188,32 +1374,13 @@ static QState active_sms_read(Gsm *const me)
             }
             return Q_HANDLED();
         }
-        case Q_TIMEOUT_SIG:
-        {
-            QActive_post((QActive *)me->master, EVENT_GSM_MODULE_FAILURE, 0);
-            return Q_TRAN(&active_idle);
-        }
-        case EVENT_GSM_ACK_RESPONSE:
-        {
-            if (me->control.response)
-            {
-                QActive_post((QActive *)me->master, EVENT_GSM_SMS_READ_DONE, 0);
-            }
-            else
-            {
-                QActive_post((QActive *)me->master, EVENT_GSM_MODULE_FAILURE, 0);
-            }
-            return Q_TRAN(&active_idle);
-        }
         case Q_EXIT_SIG:
         {
-            generic_exit_operations();
             return Q_HANDLED();
         }
     }
-    return Q_SUPER(&active_super);
+    return Q_SUPER(&active_idle);
 }
-
 static QState active_time_set(Gsm *const me)
 {
     switch (Q_SIG(me))

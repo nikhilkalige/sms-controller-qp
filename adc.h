@@ -1,3 +1,13 @@
+/**
+ ******************************************************************************
+ *
+ * @file       adc.h
+ * @author     Lonewolf
+ * @brief      ADC Header
+ * @see        The GNU Public License (GPL) Version 3
+ *
+ *****************************************************************************/
+
 #ifndef ADC_H
 #define ADC_H
 

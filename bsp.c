@@ -28,7 +28,7 @@ ISR(TIMER2_COMPA_vect)
     QK_ISR_ENTRY();                       /* inform QK-nano about ISR entry */
 #endif
     QF_tick();
-    // PORTD ^= (1 << 7);
+    PORTD ^= (1 << 7);
     //QActive_postISR((QActive *)&AO_Blinky, TIME_TICK_SIG, 0);
 #ifdef QPK
     QK_ISR_EXIT();                         /* inform QK-nano about ISR exit */
@@ -71,9 +71,11 @@ void Q_onAssert(char const Q_ROM *const Q_ROM_VAR file, int line)
     QF_INT_DISABLE();
     char int_str[10];
     itoa(line, int_str, 10);
+    //Softserial_print("Assert- ");
     Softserial_print_flash(file);
-    Softserial_print(" - ");
-    Softserial_println(int_str);
+    //Softserial_print(" - ");
+    //Softserial_println(int_str);
+    Softserial_print_byte(line);
     PORTB |= 1 << 5;                                           /* all LEDs on */
     for (;;)         /* NOTE: replace the loop with reset for final version */
     {
@@ -87,7 +89,7 @@ void QK_onIdle(void)
     PORTD ^= (1 << 5);
     /* toggle the LED number 7 on and then off, see NOTE01 */
     QF_INT_DISABLE();
-   // PORTB |= 1 << 2;
+    // PORTB |= 1 << 2;
     //PORTB &= ~ (1 << 2);
     QF_INT_ENABLE();
 
@@ -103,8 +105,8 @@ void QF_onIdle(void)          /* entered with interrupts LOCKED, see NOTE01 */
 {
 
     /* toggle the LED number 7 on and then off, see NOTE02 */
-   // LED_ON(7);
-   // LED_OFF(7);
+    // LED_ON(7);
+    // LED_OFF(7);
 
 #ifdef NDEBUG
 
