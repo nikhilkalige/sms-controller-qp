@@ -725,7 +725,6 @@ static QState active_super(Gsm *const me)
 
 static QState active_idle(Gsm *const me)
 {
-    Softserial_println("state:gsm idle");
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
@@ -1159,8 +1158,8 @@ static QState active_sms_presence(Gsm *const me)
             if (!me->control.response)
             {
                 QActive_post((QActive *)me->master, EVENT_GSM_SMS_NOT_FOUND, 0);
-                return Q_TRAN(&active_idle);
             }
+            return Q_TRAN(&active_idle);
         }
         case Q_EXIT_SIG:
         {
@@ -1174,8 +1173,8 @@ static QState active_sms_presence(Gsm *const me)
 static QState active_sms_read(Gsm *const me)
 {
     uint8_t index[3];
-    char* p_char;
-    char* p_char1;
+    char *p_char;
+    char *p_char1;
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
@@ -1217,7 +1216,7 @@ static QState active_sms_read(Gsm *const me)
                 }
                 *p_char = 0;
                 //strcpy((char *)me->control.master_buffer, (char *)p_char1);
-                strcpy((char*)me->control.phone_no, (char*)p_char1);
+                strcpy((char *)me->control.phone_no, (char *)p_char1);
                 //len = strlen((char *)p_char1);
                 p_char = memchr(p_char + 1, '\n', 29);
                 if (p_char == NULL)

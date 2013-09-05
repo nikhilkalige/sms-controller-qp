@@ -16,6 +16,8 @@
 #include "settings.h"
 #include "softserial.h"
 
+#define EMON_SERIAL_DEBUG       0
+
 typedef struct emon_temp_tag
 {
     int lastSampleV, sampleV;  //sample_ holds the raw analog read value, lastSample_ holds the last sample
@@ -162,7 +164,7 @@ static QState read_entity(emon *const me)
             {
                 double V_RATIO = me->VCAL * ((emon_vars.vcc / 1000.0) / 1023.0);
                 me->Vrms = V_RATIO * sqrt(emon_vars.sumV / emon_vars.numberOfSamples);
-#ifdef SERIAL_DEBUG
+#ifdef EMON_SERIAL_DEBUG
                 Softserial_print("Vrms = ");
                 Softserial_print_byte(me->Vrms);
                 Softserial_println("");
@@ -240,7 +242,7 @@ static QState read_vcc(emon *const me)
         {
             temp = (uint16_t)Q_PAR(me);
             emon_vars.vcc = 1126400L / temp;
-#ifdef SERIAL_DEBUG
+#ifdef EMON_SERIAL_DEBUG
             Softserial_print_byte(temp);
             Softserial_println("");
             Softserial_print("VCC = ");

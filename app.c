@@ -156,9 +156,9 @@ static uint8_t validate_user(void)
     {
         edb_readrec(pos, EDB_REC tmp);
 #ifdef SOFT_DEBUG
-        Softserial_print((char*)tmp.phone_no);
+        Softserial_print((char *)tmp.phone_no);
         Softserial_print("  ");
-        Softserial_print((char*)tmp.password);
+        Softserial_print((char *)tmp.password);
         Softserial_print("  ");
         if (tmp.pwd_present)
         {
@@ -226,8 +226,8 @@ static void initialize_system()
         user temp;
         strcpy_P(temp.phone_no, PSTR("+919964849934"));
         strcpy_P(temp.password, PSTR("1111"));
-        Softserial_println((char*)temp.phone_no);
-        Softserial_println((char*)temp.password);
+        Softserial_println((char *)temp.phone_no);
+        Softserial_println((char *)temp.password);
         temp.pwd_present = 0;
         edb_open(EEPROM_USER_HEAD);
         edb_appendrec(EDB_REC temp);
@@ -502,13 +502,14 @@ static QState init(App *const me)
 
 static QState app_idle(App const *me)
 {
+#if 0
     Softserial_print("state:idle");
     print_eventid(Q_SIG(me));
+#endif
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
         {
-            Softserial_println("entry");
             return Q_HANDLED();
         }
         case EVENT_GSM_SMS_NEW_RECIEVED:
@@ -517,14 +518,13 @@ static QState app_idle(App const *me)
 #ifdef DEBUG
             Softserial_println("New SMS");
 #endif
-            //QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_CHECK_PRESENCE, SMS_UNREAD);
-            QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_READ_REQUEST, 0x01);
+            QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_CHECK_PRESENCE, SMS_UNREAD);
+            //QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_READ_REQUEST, 0x01);
             //return Q_HANDLED();
             return Q_TRAN(&reciever);
         }
         case Q_EXIT_SIG:
         {
-            Softserial_println("exit");
             return Q_HANDLED();
         }
     }
@@ -534,13 +534,15 @@ static QState app_idle(App const *me)
 static QState reciever(App const *me)
 {
     uint8_t index;
+#if 0
     Softserial_print("state:reciever");
     print_eventid(Q_SIG(me));
+#endif
+
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
         {
-            Softserial_println("entry");
             return Q_HANDLED();
         }
         case EVENT_GSM_SMS_FOUND:
@@ -561,8 +563,14 @@ static QState reciever(App const *me)
             Softserial_println("read done");
             ///strcpy((char *)me->current_phone_no, (char *)me->buffer);
             //index = strlen((char *)me->buffer);
-           // strcpy((char *)(char *)me->mssg_buf, (char *)(me->buffer + index + 1));
+            // strcpy((char *)(char *)me->mssg_buf, (char *)(me->buffer + index + 1));
+#if 1
             return Q_TRAN(&validate);
+#endif
+#if 0
+            strcpy_P(me->current_phone_no, PSTR("+919964849934"));
+            return Q_TRAN(&action_status);
+#endif
         }
         case EVENT_GSM_SMS_NOT_FOUND:
         {
@@ -570,7 +578,6 @@ static QState reciever(App const *me)
         }
         case Q_EXIT_SIG:
         {
-            Softserial_println("exit");
             return Q_HANDLED();
         }
     }
@@ -580,26 +587,25 @@ static QState reciever(App const *me)
 static QState validate(App const *me)
 {
     uint8_t index;
+#if 0
     Softserial_print("state:validate");
     print_eventid(Q_SIG(me));
+#endif
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
         {
-            Softserial_println("entry");
             return Q_HANDLED();
         }
         case Q_INIT_SIG:
         {
-            Softserial_println("init");
             /* Validate the phoneno, password */
             index = 0;
-            //index = validate_user();
+            index = validate_user();
             if (!index)
             {
                 Softserial_println("here");
-                return Q_TRAN(&app_idle);
-                //return Q_HANDLED();
+                //return Q_TRAN(&app_idle);
             }
             else
             {
@@ -612,10 +618,12 @@ static QState validate(App const *me)
                 }
                 else if (strstr((char *)me->mssg_buf, "ON") != NULL)
                 {
+                    Softserial_println("going on");
                     return Q_TRAN(&action_on);
                 }
                 else if (strstr((char *)me->mssg_buf, "OFF") != NULL)
                 {
+                    Softserial_println("going off");
                     return Q_TRAN(&action_off);
                 }
                 else if (strstr((char *)me->mssg_buf, "MENU") != NULL)
@@ -624,32 +632,11 @@ static QState validate(App const *me)
                 }
                 else
                 {
-                    return Q_TRAN( &app_idle);
+                    //return Q_TRAN( &app_idle);
                 }
+                return Q_HANDLED();
             }
         }
-#if 0
-        case EVENT_APP_ACTION_STATUS:
-        {
-            return Q_HANDLED();
-        }
-        case EVENT_APP_ACTION_MENU:
-        {
-            return Q_HANDLED();
-        }
-        case EVENT_APP_ACTION_OFF:
-        {
-            return Q_HANDLED();
-        }
-        case EVENT_APP_ACTION_ON:
-        {
-            return Q_HANDLED();
-        }
-        case EVENT_APP_ACTION_INVALID:
-        {
-            return Q_HANDLED();
-        }
-#endif
         case Q_EXIT_SIG:
         {
             return Q_HANDLED();
@@ -701,11 +688,13 @@ static QState action_status(App *const me)
             else
             {
                 vi_string(me->mssg_buf);
+                Softserial_println((char *)me->mssg_buf);
                 QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_SEND, 0);
                 return Q_HANDLED();
             }
             me->VIrms[me->i_generic] = (uint16_t)Q_PAR(me);
             me->i_generic++;
+            QActive_post((QActive *)&emon_dev, EVENT_EMON_READ_ENTITY, adc_pin);
             return Q_HANDLED();
         }
         case EVENT_GSM_SMS_SENT:
@@ -718,11 +707,15 @@ static QState action_status(App *const me)
             return Q_HANDLED();
         }
     }
-    return Q_SUPER(&app_idle);
+    return Q_SUPER(&validate);
 }
 
 static QState action_on(App *const me)
 {
+#if 0
+    Softserial_print("state:act on");
+    print_eventid(Q_SIG(me));
+#endif
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
@@ -751,7 +744,6 @@ static QState action_on(App *const me)
         case EVENT_GSM_CLOCK_READ_DONE:
         {
             strcpy((char *)(char *)me->mssg_buf, (char *)me->buffer);
-            strcat((char *)(char *)me->mssg_buf, " ON");
             QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_SEND, 0);
             return Q_HANDLED();
         }
@@ -765,11 +757,15 @@ static QState action_on(App *const me)
             return Q_HANDLED();
         }
     }
-    return Q_SUPER(&QHsm_top);
+    return Q_SUPER(&validate);
 }
 
 static QState action_off(App *const me)
 {
+#if 0
+    Softserial_print("state:act off");
+    print_eventid(Q_SIG(me));
+#endif
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
@@ -793,12 +789,11 @@ static QState action_off(App *const me)
         {
             PORT_MOTOR_OFF &= ~(_BV(PIN_MOTOR_OFF));
             me->motor_on = 0;
-            return Q_TRAN(&action_on);
+            return Q_TRAN(&action_off);
         }
         case EVENT_GSM_CLOCK_READ_DONE:
         {
             strcpy((char *)(char *)me->mssg_buf, (char *)me->buffer);
-            strcat((char *)(char *)me->mssg_buf, " OFF");
             QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_SEND, 0);
             return Q_HANDLED();
         }
@@ -812,7 +807,7 @@ static QState action_off(App *const me)
             return Q_HANDLED();
         }
     }
-    return Q_SUPER(&QHsm_top);
+    return Q_SUPER(&validate);
 }
 
 /* TODO: make changes in the super state to handle sessions */
@@ -856,7 +851,7 @@ static QState action_menu(App *const me)
             return Q_HANDLED();
         }
     }
-    return Q_SUPER(&QHsm_top);
+    return Q_SUPER(&validate);
 }
 
 static QState menu_parse(App *const me)

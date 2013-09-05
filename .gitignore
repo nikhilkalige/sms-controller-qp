@@ -5,3 +5,4 @@ sim900.sublime-project
 debug/*
 *.swp
 .SyncArchive/*
+edb_example.c
