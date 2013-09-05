@@ -95,7 +95,7 @@ static QState active_sms_read(Gsm *const me);
 static QState active_sms_presence(Gsm *const me);
 static QState active_sms_extract_time(Gsm *const me);
 static QState active_sms_extract_mssg(Gsm *const me);
-
+static QState active_sms_send_support(Gsm *const me);
 
 static QState init_inactive(Gsm *const me);
 static QState init_powering_on(Gsm *const me);
@@ -357,9 +357,9 @@ static void send_command_timeout(uint8_t *data, uint16_t timeout, uint8_t in_fla
         {
             if (in_flash)
             {
-                Softserial_println("flash len ex");
+                // Softserial_println("flash len 1"); Softserial_println_flash(data);
                 memcpy_P(gsm_dev.p_comm->tx.p_data, (char *)data, gsm_dev.p_comm->tx.size);
-                QActive_post((QActive *)&gsm_dev, EVENT_GSM_BUFFER_FULL, gsm_dev.p_comm->tx.size);
+                QActive_post((QActive *)&gsm_dev, EVENT_GSM_BUFFER_FULL, gsm_dev.p_comm->tx.size + 1);
             }
         }
     }
@@ -371,7 +371,7 @@ static void send_command_timeout(uint8_t *data, uint16_t timeout, uint8_t in_fla
             sei();
             if (in_flash)
             {
-                Softserial_println("");
+                //Softserial_println("flash len 2"); Softserial_println_flash(data);
                 strcpy_P((char *)gsm_dev.p_comm->tx.p_data, (char *)data);
             }
             else
@@ -383,7 +383,7 @@ static void send_command_timeout(uint8_t *data, uint16_t timeout, uint8_t in_fla
         {
             if (in_flash)
             {
-                Softserial_println("");
+                //Softserial_println("flash len 3"); Softserial_println_flash(data);
                 strcat_P((char *)gsm_dev.p_comm->tx.p_data, (char *)data);
             }
             else
@@ -510,6 +510,13 @@ static void read_sms_command(uint8_t *position)
     send_command((uint8_t *)CMGR, 1);
     send_command(position, 0);
     send_command_timeout((uint8_t *)"\r\n", 1000, 0);
+}
+
+static void print_eventid(uint8_t id)
+{
+    Softserial_print("-");
+    Softserial_print_byte((uint8_t)id);
+    Softserial_println("");
 }
 
 /************************************************************************************************************************************
@@ -1006,6 +1013,8 @@ static QState active_network_status(Gsm *const me)
 
 static QState active_sms_send(Gsm *const me)
 {
+    Softserial_print("state:sms send");
+    print_eventid(Q_SIG(me));
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
@@ -1027,32 +1036,22 @@ static QState active_sms_send(Gsm *const me)
         case EVENT_GSM_BUFFER_FULL:
         {
             me->control.use_flash = Q_PAR(me);
-            return Q_HANDLED();
-        }
-        case EVENT_COM_SEND_DONE:
-        {
-            if (me->control.use_flash)
-            {
-                QActive_disarm((QActive *)me);
-                send_command_timeout((uint8_t *)(me->control.mssg_buf[1] << 8 | me->control.mssg_buf[0]) + me->control.use_flash, 0, 1);
-                *me->control.master_buffer = 0x1A;
-                *(me->control.master_buffer + 1) = 0;
-                send_command_timeout(me->control.master_buffer, 5 sec, 0);
-                me->control.use_flash = 0;
-            }
-            return Q_HANDLED();
+            return Q_TRAN(&active_sms_send_support);
         }
         case EVENT_GSM_SMS_RESPONSE:
         {
             me->control.response = (uint8_t)(Q_PAR(me) >> 16);
             if (me->control.response == GSM_MSG_SMS_PROMPT)
             {
+                Softserial_println("gsm even2");
                 QActive_disarm((QActive *)me);
 #if 0
                 send_command_timeout(me->control.master_buffer, 0, 0);
 #endif
                 if (me->control.use_flash)
                 {
+                    Softserial_println("gsm even");
+                    Softserial_println_flash(me->control.mssg_buf[1] << 8 | me->control.mssg_buf[0]);
                     send_command_timeout((uint8_t *)(me->control.mssg_buf[1] << 8 | me->control.mssg_buf[0]), 0, 1);
                 }
                 else
@@ -1089,6 +1088,28 @@ static QState active_sms_send(Gsm *const me)
         }
     }
     return Q_SUPER(&active_super);
+}
+
+static QState active_sms_send_support(Gsm *const me)
+{
+    switch (Q_SIG(me))
+    {
+        case EVENT_COM_SEND_DONE:
+        {
+            if (me->control.use_flash)
+            {
+                QActive_disarm((QActive *)me);
+                send_command_timeout((uint8_t *)(me->control.mssg_buf[1] << 8 | me->control.mssg_buf[0]) + me->control.use_flash, 0, 1);
+                *me->control.master_buffer = 0x1A;
+                *(me->control.master_buffer + 1) = 0;
+                send_command_timeout(me->control.master_buffer, 5 sec, 0);
+                me->control.use_flash = 0;
+            }
+            return Q_HANDLED();
+        }
+
+    }
+    return Q_SUPER(&active_sms_send);
 }
 
 static QState active_sms_delete(Gsm *const me)

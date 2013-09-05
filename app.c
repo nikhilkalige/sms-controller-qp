@@ -494,6 +494,8 @@ static QState init(App *const me)
         case EVENT_GSM_NETWORK_CONNECTED:
         {
             /* Registration Complete */
+            me->mssg_buf[0] = ((uint16_t)&Menu_Strings & 0xFF);
+            me->mssg_buf[1] = (((uint16_t)&Menu_Strings >> 8) & 0xFF);
             return Q_TRAN(&app_idle);
         }
     }
@@ -518,7 +520,7 @@ static QState app_idle(App *const me)
 #ifdef DEBUG
             Softserial_println("New SMS");
 #endif
-      //      QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_CHECK_PRESENCE, SMS_UNREAD);
+            //      QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_CHECK_PRESENCE, SMS_UNREAD);
             //QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_READ_REQUEST, 0x01);
             //return Q_HANDLED();
             //return Q_TRAN(&reciever);
@@ -837,6 +839,7 @@ static QState action_menu(App *const me)
             else
             {
                 /* Menu has already been entered, so parse the command */
+                Softserial_println("Old Session");
                 return Q_TRAN(&menu_parse);
             }
             return Q_HANDLED();
@@ -844,7 +847,7 @@ static QState action_menu(App *const me)
         case EVENT_APP_START_SESSION:
         {
             /* Set session bit, update timings and send menu list of commands message */
-            Softserial_println("meny send");
+            Softserial_println("New Session");
             update_session_expired(1);
             update_session_menu(0);
             me->session_details[me->current_userid].session_timing = 5;
@@ -867,6 +870,10 @@ static QState action_menu(App *const me)
 
 static QState menu_parse(App *const me)
 {
+#if 1
+    Softserial_print("state:menu par");
+    print_eventid(Q_SIG(me));
+#endif
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
@@ -881,19 +888,35 @@ static QState menu_parse(App *const me)
                 me->session_details[me->current_userid].menu_option = update_menu_state((char *)(char *)me->mssg_buf);
                 switch (me->session_details[me->current_userid].menu_option)
                 {
-                    case CHANGE_PASS: return Q_TRAN(&change_pass);
-                    case ADD_NO: return Q_TRAN(&add_no);
-                    case DEL_NO: return Q_TRAN(&del_no);
-                    case EN_DIS_PASS: return Q_TRAN(&en_dis_pwd);
-                    case EN_BROADCAST: return Q_TRAN(&enable_broadcast);
-                    case STATUS_FREQ: return Q_TRAN(&status_freq);
-                    case SET_TIME: return Q_TRAN(&set_time);
-                    default: return Q_TRAN(&generic_menu_handler);
+                    case CHANGE_PASS:
+                        Softserial_println("Password");
+                        return Q_TRAN(&change_pass);
+                    case ADD_NO:
+                        Softserial_println("Add no");
+                        return Q_TRAN(&add_no);
+                    case DEL_NO:
+                        Softserial_println("Del no");
+                        return Q_TRAN(&del_no);
+                    case EN_DIS_PASS:
+                        Softserial_println("EN Pass");
+                        return Q_TRAN(&en_dis_pwd);
+                    case EN_BROADCAST:
+                        Softserial_println("En braod");
+                        return Q_TRAN(&enable_broadcast);
+                    case STATUS_FREQ:
+                        Softserial_println("Status fr");
+                        return Q_TRAN(&status_freq);
+                    case SET_TIME:
+                        Softserial_println("Set time");
+                        return Q_TRAN(&set_time);
+                    default:
+                        Softserial_println("Generic");
+                        return Q_TRAN(&generic_menu_handler);
                 }
             }
         }
     }
-    return Q_SUPER(&QHsm_top);
+    return Q_SUPER(&action_menu);
 }
 
 static QState change_pass(App *const me)

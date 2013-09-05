@@ -148,6 +148,10 @@ void Serial_init(uint8_t *storage_rx, uint8_t size_rx, uint8_t *p_timeout_, uint
     ser_dev.rx.error_flag = 0;
 }
 
+/*
+* Error Description
+* 234 - Overrun Error
+*/
 uint8_t Serial_read_size()
 {
     uint8_t size;
