@@ -36,6 +36,7 @@ typedef struct Gsm_tag
         uint8_t *master_buffer;
         uint8_t *phone_no;
         uint8_t *mssg_buf;
+        uint8_t use_flash;
     } control;
 } Gsm;
 
@@ -123,6 +124,7 @@ void GSM_config(App *master, Com *com_drv)
     gsm_dev.master = master;
     gsm_dev.p_comm = com_drv;
     gsm_dev.control.current_op = 0;
+    gsm_dev.control.use_flash = 0;
     gsm_dev.control.master_buffer = master->buffer;
     gsm_dev.control.phone_no = master->current_phone_no;
     gsm_dev.control.mssg_buf = master->mssg_buf;
@@ -322,7 +324,10 @@ static void send_command_timeout(uint8_t *data, uint16_t timeout, uint8_t in_fla
     uint8_t length;
     if (in_flash)
     {
+        Softserial_print("len-");
         length = strlen_P((char *)data);
+        Softserial_print_byte(length);
+        Softserial_println("");
     }
     else
     {
@@ -343,6 +348,54 @@ static void send_command_timeout(uint8_t *data, uint16_t timeout, uint8_t in_fla
     Softserial_println("");
 #endif
     cli();
+    length = length + gsm_dev.p_comm->tx.payload_size;
+    sei();
+    if (length > gsm_dev.p_comm->tx.size)
+    {
+        length = gsm_dev.p_comm->tx.size;
+        if (gsm_dev.p_comm->tx.payload_size == 0)
+        {
+            if (in_flash)
+            {
+                Softserial_println("flash len ex");
+                memcpy_P(gsm_dev.p_comm->tx.p_data, (char *)data, gsm_dev.p_comm->tx.size);
+                QActive_post((QActive *)&gsm_dev, EVENT_GSM_BUFFER_FULL, gsm_dev.p_comm->tx.size);
+            }
+        }
+    }
+    else
+    {
+        cli();
+        if (gsm_dev.p_comm->tx.payload_size == 0)
+        {
+            sei();
+            if (in_flash)
+            {
+                Softserial_println("");
+                strcpy_P((char *)gsm_dev.p_comm->tx.p_data, (char *)data);
+            }
+            else
+            {
+                strcpy((char *)gsm_dev.p_comm->tx.p_data, (char *)data);
+            }
+        }
+        else
+        {
+            if (in_flash)
+            {
+                Softserial_println("");
+                strcat_P((char *)gsm_dev.p_comm->tx.p_data, (char *)data);
+            }
+            else
+            {
+                strcat((char *)gsm_dev.p_comm->tx.p_data, (char *)data);
+            }
+        }
+    }
+    cli();
+    gsm_dev.p_comm->tx.payload_size = length;
+    sei();
+#if 0
     if (gsm_dev.p_comm->tx.payload_size == 0)
     {
         gsm_dev.p_comm->tx.payload_size = length;
@@ -369,7 +422,7 @@ static void send_command_timeout(uint8_t *data, uint16_t timeout, uint8_t in_fla
             strcat((char *)gsm_dev.p_comm->tx.p_data, (char *)data);
         }
     }
-
+#endif
     QActive_post((QActive *)gsm_dev.p_comm, EVENT_COM_SEND_REQUEST, 0);
     QActive_arm((QActive *)&gsm_dev, timeout);
 }
@@ -825,6 +878,7 @@ static QState active_idle(Gsm *const me)
             {
                 return Q_TRAN(&active_time_set);
             }
+            return Q_HANDLED();
         }
         case EVENT_GSM_SMS_SEND:
         {
@@ -835,6 +889,7 @@ static QState active_idle(Gsm *const me)
             }
             else
             {
+                me->control.use_flash = (uint8_t)Q_PAR(me);
                 return Q_TRAN(&active_sms_send);
             }
         }
@@ -969,6 +1024,24 @@ static QState active_sms_send(Gsm *const me)
             QActive_post((QActive *)me->master, EVNET_GSM_MODULE_FAILURE, 0);
             return Q_TRAN(&active_idle);
         }
+        case EVENT_GSM_BUFFER_FULL:
+        {
+            me->control.use_flash = Q_PAR(me);
+            return Q_HANDLED();
+        }
+        case EVENT_COM_SEND_DONE:
+        {
+            if (me->control.use_flash)
+            {
+                QActive_disarm((QActive *)me);
+                send_command_timeout((uint8_t *)(me->control.mssg_buf[1] << 8 | me->control.mssg_buf[0]) + me->control.use_flash, 0, 1);
+                *me->control.master_buffer = 0x1A;
+                *(me->control.master_buffer + 1) = 0;
+                send_command_timeout(me->control.master_buffer, 5 sec, 0);
+                me->control.use_flash = 0;
+            }
+            return Q_HANDLED();
+        }
         case EVENT_GSM_SMS_RESPONSE:
         {
             me->control.response = (uint8_t)(Q_PAR(me) >> 16);
@@ -978,10 +1051,22 @@ static QState active_sms_send(Gsm *const me)
 #if 0
                 send_command_timeout(me->control.master_buffer, 0, 0);
 #endif
+                if (me->control.use_flash)
+                {
+                    send_command_timeout((uint8_t *)(me->control.mssg_buf[1] << 8 | me->control.mssg_buf[0]), 0, 1);
+                }
+                else
+                {
+                    strcat((char *)me->control.mssg_buf, "\x1A");
+                    send_command_timeout(me->control.mssg_buf, 0, 0);
+                }
+#if 0
+                strcat((char *)me->control.mssg_buf, "\x1A");
                 send_command_timeout(me->control.mssg_buf, 0, 0);
                 *me->control.master_buffer = 0x1A;
                 *(me->control.master_buffer + 1) = 0;
                 send_command_timeout(me->control.master_buffer, 5 sec, 0);
+#endif
             }
             return Q_HANDLED();
         }

@@ -33,9 +33,9 @@
 static QState initiate_app(App *const me);
 static QState init(App *const me);
 //static QState active(App *const me);
-static QState app_idle(App const *me);
-static QState reciever(App const *me);
-static QState validate(App const *me);
+static QState app_idle(App *const me);
+static QState reciever(App *const me);
+static QState validate(App *const me);
 static QState action_status(App *const me);
 static QState action_menu(App *const me);
 static QState action_on(App *const me);
@@ -500,7 +500,7 @@ static QState init(App *const me)
     return Q_SUPER(&QHsm_top);
 }
 
-static QState app_idle(App const *me)
+static QState app_idle(App *const me)
 {
 #if 0
     Softserial_print("state:idle");
@@ -518,10 +518,12 @@ static QState app_idle(App const *me)
 #ifdef DEBUG
             Softserial_println("New SMS");
 #endif
-            QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_CHECK_PRESENCE, SMS_UNREAD);
+      //      QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_CHECK_PRESENCE, SMS_UNREAD);
             //QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_READ_REQUEST, 0x01);
             //return Q_HANDLED();
-            return Q_TRAN(&reciever);
+            //return Q_TRAN(&reciever);
+            strcpy_P(me->current_phone_no, PSTR("+919964849934"));
+            return Q_TRAN(&action_menu);
         }
         case Q_EXIT_SIG:
         {
@@ -531,7 +533,7 @@ static QState app_idle(App const *me)
     return Q_SUPER(&QHsm_top);
 }
 
-static QState reciever(App const *me)
+static QState reciever(App *const me)
 {
     uint8_t index;
 #if 0
@@ -584,7 +586,7 @@ static QState reciever(App const *me)
     return Q_SUPER(&app_idle);
 }
 
-static QState validate(App const *me)
+static QState validate(App *const me)
 {
     uint8_t index;
 #if 0
@@ -743,7 +745,8 @@ static QState action_on(App *const me)
         }
         case EVENT_GSM_CLOCK_READ_DONE:
         {
-            strcpy((char *)(char *)me->mssg_buf, (char *)me->buffer);
+            strcpy((char *)me->mssg_buf, (char *)me->buffer);
+            strcat((char *)me->mssg_buf, " ON");
             QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_SEND, 0);
             return Q_HANDLED();
         }
@@ -794,6 +797,7 @@ static QState action_off(App *const me)
         case EVENT_GSM_CLOCK_READ_DONE:
         {
             strcpy((char *)(char *)me->mssg_buf, (char *)me->buffer);
+            strcat((char *)me->mssg_buf, " OFF");
             QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_SEND, 0);
             return Q_HANDLED();
         }
@@ -813,6 +817,10 @@ static QState action_off(App *const me)
 /* TODO: make changes in the super state to handle sessions */
 static QState action_menu(App *const me)
 {
+#if 1
+    Softserial_print("state:act menu");
+    print_eventid(Q_SIG(me));
+#endif
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
@@ -836,10 +844,13 @@ static QState action_menu(App *const me)
         case EVENT_APP_START_SESSION:
         {
             /* Set session bit, update timings and send menu list of commands message */
+            Softserial_println("meny send");
             update_session_expired(1);
             update_session_menu(0);
             me->session_details[me->current_userid].session_timing = 5;
-            QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_SEND, 0);
+            me->mssg_buf[0] = ((uint16_t)&Menu_Strings & 0xFF);
+            me->mssg_buf[1] = (((uint16_t)&Menu_Strings >> 8) & 0xFF);
+            QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_SEND, 1);
             return Q_HANDLED();
         }
         case EVENT_GSM_SMS_SENT:
