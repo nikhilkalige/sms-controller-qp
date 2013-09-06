@@ -484,7 +484,7 @@ static void get_time_command(void)
 static void set_time_command()
 {
     send_command_timeout((uint8_t *)CCLK, 0, 1);
-    send_command(gsm_dev.control.master_buffer, 0);
+    send_command(gsm_dev.control.mssg_buf, 0);
     send_command_timeout((uint8_t *)"\r\n", 1000, 0);
 }
 
@@ -1374,15 +1374,22 @@ static QState active_sms_extract_time(Gsm *const me)
 {
     uint8_t *p_char;
     uint8_t *p_char1;
+    uint8_t index[3];
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
         {
+            Softserial_println("reading");
+            me->control.busy = true;
+            me->control.current_op = GSM_OP_SMS;
+            strcpy((char *)index, "1");
+            read_sms_command(index);
             return Q_HANDLED();
         }
         case Q_INIT_SIG:
         {
-            return Q_TRAN(&active_sms_read);
+            //return Q_TRAN(&active_sms_read);
+            return Q_HANDLED();
         }
         case EVENT_GSM_SMS_RESPONSE:
         {
@@ -1390,32 +1397,53 @@ static QState active_sms_extract_time(Gsm *const me)
             if ((me->control.response == GSM_MSG_SMS_REC_READ) || (me->control.response == GSM_MSG_SMS_REC_UNREAD))
             {
                 /* response for new SMS:
-                <CR><LF>+CMGR: "REC UNREAD","+XXXXXXXXXXXX",,"02/03/18,09:54:28+40"<CR><LF>
+                <CR><LF>+CMGR: "REC UNREAD","+XXXXXXXXXXXX","","02/03/18,09:54:28+40"<CR><LF>
                 There is SMS text<CR><LF>OK<CR><LF>
-                <CR><LF>+CMGR: "REC READ","+XXXXXXXXXXXX",,"02/03/18,09:54:28+40"<CR><LF>
+                <CR><LF>+CMGR: "REC READ","+XXXXXXXXXXXX","","02/03/18,09:54:28+40"<CR><LF>
                 There is SMS text<CR><LF>*/
 
                 p_char = (uint8_t *)Q_PAR(me);
                 p_char = memchr(p_char, ',', 23);
+                p_char++;
                 p_char = memchr(p_char, ',', 23);
-                if (*(p_char + 1) == ',')
+                if (*(p_char + 4) == '"')
                 {
-                    p_char += 2;
+                    p_char += 5;
                     p_char1 = memchr(p_char, '"', 22);
                     if (p_char1 == NULL)
                     {
+                        me->control.response = 0;
                         QActive_post((QActive *)me->master, EVENT_GSM_PARSING_ERROR, 0);
                         return Q_HANDLED();
                     }
                     *(p_char1 + 1) = 0; // end of string
                     p_char--;
                 }
-                strcpy((char *)me->control.master_buffer, (char *)p_char);
+                else
+                {
+                    me->control.response = 0;
+                }
+                strcpy((char *)me->control.mssg_buf, (char *)p_char);
+                Softserial_println((char*)me->control.mssg_buf);
             }
             return Q_HANDLED();
         }
+        case EVENT_GSM_ACK_RESPONSE:
+        {
+            Softserial_println("reading ack");
+            if (me->control.response)
+            {
+                QActive_post((QActive *)me->master, EVENT_GSM_SMS_READ_DONE, 0);
+            }
+            else
+            {
+                QActive_post((QActive *)me->master, EVENT_GSM_MODULE_FAILURE, 0);
+            }
+            return Q_TRAN(&active_idle);
+        }
         case Q_EXIT_SIG:
         {
+            generic_exit_operations();
             return Q_HANDLED();
         }
     }

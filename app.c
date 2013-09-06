@@ -515,8 +515,9 @@ static QState init(App *const me)
         case Q_TIMEOUT_SIG:
         {
             Softserial_println("INIT APP T RECIEVED");
-            QActive_post((QActive *)&gsm_dev, EVENT_SYSTEM_GSM_INIT, 0);
-            return Q_HANDLED();
+            //QActive_post((QActive *)&gsm_dev, EVENT_SYSTEM_GSM_INIT, 0);
+            return Q_TRAN(&set_time);
+            //return Q_HANDLED();
         }
         case EVENT_GSM_INIT_DONE:
         {
@@ -657,7 +658,7 @@ static QState validate(App *const me)
             {
                 Softserial_println("here 1");
                 convert_uppercase((char *)me->mssg_buf);
-                Softserial_println(me->mssg_buf);
+                Softserial_println((char *)me->mssg_buf);
                 if (strstr((char *)me->mssg_buf, "STATUS") != NULL)
                 {
                     return Q_TRAN(&action_status);
@@ -1043,7 +1044,6 @@ static QState change_pass(App *const me)
     return Q_SUPER(&menu_parse);
 }
 
-/* TODO: check addno eeprom part */
 static QState add_no(App *const me)
 {
     char *pos;
@@ -1115,6 +1115,7 @@ static QState add_no(App *const me)
     return Q_SUPER(&menu_parse);
 }
 
+/* TODO: Update userid after delete */
 static QState del_no(App *const me)
 {
     char ch[2];
@@ -1195,6 +1196,7 @@ static QState en_dis_pwd(App *const me)
 {
     char *pos;
     uint8_t length;
+    user temp;
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
@@ -1218,20 +1220,23 @@ static QState en_dis_pwd(App *const me)
                 {
                     /* Read current user from memory and update the settings TODO */
                     convert_uppercase((char *)me->mssg_buf);
+                    edb_open(EEPROM_USER_HEAD);
+                    edb_readrec(me->current_userid - 1, EDB_REC temp);
                     if (strstr_P((char *)me->mssg_buf, PSTR("EN")))
                     {
+                        temp.pwd_present = 1;
                         strcpy_P((char *)me->mssg_buf, PSTR("PASSWORD ENABLED"));
-                        // Module.Core_Values.Pass_Present = true;
                     }
                     else if (strstr_P((char *)me->mssg_buf, PSTR("DI")))
                     {
                         strcpy_P((char *)me->mssg_buf, PSTR("PASSWORD DISABLED"));
-                        // Module.Core_Values.Pass_Present = false;
+                        temp.pwd_present = 0;
                     }
                     else
                     {
                         strcpy_P((char *)me->mssg_buf, PSTR("INVALID"));
                     }
+                    edb_updaterec(me->current_userid, EDB_REC temp);
                     update_system_settings();
                 }
                 else
@@ -1375,10 +1380,10 @@ static QState set_time(App *const me)
     {
         case Q_ENTRY_SIG:
         {
-            if (!check_menu_entry())
-            {
+           // if (!check_menu_entry())
+          //  {
                 QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_READ_EXTRACT_TIME, 0);
-            }
+           // }
             return Q_HANDLED();
         }
         case EVENT_GSM_SMS_READ_DONE:
