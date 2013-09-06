@@ -42,16 +42,19 @@
 /*
     typedef struct user_tag
     {
+        uint8_t id;
         unsigned char phone_no[15];
         unsigned char password[5];
         uint8_t pwd_present;
     } user;
-    21 bytes per user, 4 users maximum
-    21 * 4 = 44 bytes
+    22 bytes per user, 4 users maximum
+    22 * 4 = 88 bytes
     10 bytes for the header
-    ie. 44 + 10 = 54 bytes
+    ie. 88 + 10 = 98 bytes
+    Provide extra space for 2 more users
+    98 + (22 * 2) = 142
 */
-#define USER_SIZE           54
+#define USER_SIZE           142
 #define EEPROM_USER_HEAD    0
 
 /*
@@ -66,10 +69,12 @@
     1 * 4 = 4 bytes
     10 bytes for the header
     ie. 4 + 10 = 14 bytes
-    Head will start at 54
+    Head will start at 142
+    Add 10 bytes of extra space
+    14 + 10 = 24
 */
-#define SETTINGS_SIZE           68  /* 54 + 14 = 68 */
-#define EEPROM_SETTINGS_HEAD    54
+#define SETTINGS_SIZE           166  /* 142 + 24 = 166 */
+#define EEPROM_SETTINGS_HEAD    142
 
 
 #if 0

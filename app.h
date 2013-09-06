@@ -38,6 +38,7 @@ Menu_Option;
 
 typedef struct user_tag
 {
+    uint8_t id;
     unsigned char phone_no[15];
     unsigned char password[5];
     uint8_t pwd_present;

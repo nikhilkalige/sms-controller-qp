@@ -195,12 +195,14 @@ static void comm_rx_handler(uint8_t size)
                 Softserial_print_array((char *)p_str, str_size);
                 Softserial_println("");
                 parsed_command = check_result_codes(p_str, &message_id);
+#if 0
                 Softserial_print("evt id= ");
                 Softserial_print_byte(parsed_command);
                 Softserial_println("");
                 Softserial_print("msg id= ");
                 Softserial_print_byte(message_id);
                 Softserial_println("");
+#endif
                 switch (parsed_command)
                 {
                     case EVENT_GSM_SMS_RESPONSE:
@@ -324,10 +326,7 @@ static void send_command_timeout(uint8_t *data, uint16_t timeout, uint8_t in_fla
     uint8_t length;
     if (in_flash)
     {
-        Softserial_print("len-");
         length = strlen_P((char *)data);
-        Softserial_print_byte(length);
-        Softserial_println("");
     }
     else
     {
@@ -1013,8 +1012,10 @@ static QState active_network_status(Gsm *const me)
 
 static QState active_sms_send(Gsm *const me)
 {
+#if 0
     Softserial_print("state:sms send");
     print_eventid(Q_SIG(me));
+#endif
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
@@ -1043,14 +1044,12 @@ static QState active_sms_send(Gsm *const me)
             me->control.response = (uint8_t)(Q_PAR(me) >> 16);
             if (me->control.response == GSM_MSG_SMS_PROMPT)
             {
-                Softserial_println("gsm even2");
                 QActive_disarm((QActive *)me);
 #if 0
                 send_command_timeout(me->control.master_buffer, 0, 0);
 #endif
                 if (me->control.use_flash)
                 {
-                    Softserial_println("gsm even");
                     Softserial_println_flash(me->control.mssg_buf[1] << 8 | me->control.mssg_buf[0]);
                     send_command_timeout((uint8_t *)(me->control.mssg_buf[1] << 8 | me->control.mssg_buf[0]), 0, 1);
                 }

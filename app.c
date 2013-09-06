@@ -68,11 +68,11 @@ static void update_session_expired(uint8_t bit)
 {
     if (bit)
     {
-        app_dev.session_expired |= _BV(app_dev.current_userid);
+        app_dev.session_expired |= _BV((app_dev.current_userid - 1));
     }
     else
     {
-        app_dev.session_expired &= ~(_BV(app_dev.current_userid));
+        app_dev.session_expired &= ~(_BV((app_dev.current_userid - 1)));
     }
 }
 
@@ -80,17 +80,17 @@ static void update_session_menu(uint8_t bit)
 {
     if (bit)
     {
-        app_dev.session_expired |= (_BV(app_dev.current_userid) << 4);
+        app_dev.session_expired |= (_BV((app_dev.current_userid - 1)) << 4);
     }
     else
     {
-        app_dev.session_expired &= ~((_BV(app_dev.current_userid)) << 4);
+        app_dev.session_expired &= ~((_BV((app_dev.current_userid - 1))) << 4);
     }
 }
 
 static uint8_t check_menu_entry()
 {
-    if (!(app_dev.session_expired & ((_BV(app_dev.current_userid)) << 4)))
+    if (!(app_dev.session_expired & ((_BV((app_dev.current_userid - 1))) << 4)))
     {
         return 0;
     }
@@ -137,6 +137,8 @@ void update_system_settings(void)
     /*    db.open(EEPROM_SETTINGS_HEAD);
         db.updateRec(1,EDB_REC Module.Core_Values);
         return;*/
+    edb_open(EEPROM_SETTINGS_HEAD);
+    edb_updaterec(1, EDB_REC app_dev.system_settings);
     return;
 }
 
@@ -172,6 +174,7 @@ static uint8_t validate_user(void)
 #endif
         if (strstr((char *)app_dev.current_phone_no, (char *)tmp.phone_no) != NULL)
         {
+            app_dev.current_userid = tmp.id;
             Softserial_println("phone match");
             /* Phone no found now check password */
             if (tmp.pwd_present)
@@ -224,8 +227,9 @@ static void initialize_system()
 
         /*  Add User  */
         user temp;
-        strcpy_P(temp.phone_no, PSTR("+919964849934"));
-        strcpy_P(temp.password, PSTR("1111"));
+        temp.id = 1;
+        strcpy_P((char *)temp.phone_no, PSTR("+919964849934"));
+        strcpy_P((char *)temp.password, PSTR("1111"));
         Softserial_println((char *)temp.phone_no);
         Softserial_println((char *)temp.password);
         temp.pwd_present = 0;
@@ -245,29 +249,6 @@ static void initialize_system()
     /* Initialize the Class Module with values from EEPROM */
     edb_open(EEPROM_SETTINGS_HEAD);
     edb_readrec(1, EDB_REC app_dev.system_settings);
-#ifdef SOFT_DEBUG
-    Softserial_print("PASS-");
-    if (app_dev.system_settings.pass_present)
-    {
-        Softserial_println("EN");
-    }
-    else
-    {
-        Softserial_println("DI");
-    }
-    Softserial_print("BCAST-");
-    if (app_dev.system_settings.broadcast_mssg)
-    {
-        Softserial_println("EN");
-    }
-    else
-    {
-        Softserial_println("DI");
-    }
-    Softserial_print("No User-");
-    Softserial_print_byte((uint8_t)app_dev.system_settings.no_users);
-    Softserial_println("");
-#endif
     //Module.Next_Status_Time = Module.Core_Values.Status_Freq * 60000;
 }
 
@@ -314,6 +295,9 @@ static void vi_string(unsigned char *string)
 
 uint8_t update_menu_state(char *string)
 {
+    Softserial_print("Menu:str-");
+    Softserial_print(string);
+    Softserial_print("-");
     uint8_t length , i , value;
     length = strlen(string);
     value = 0;
@@ -323,8 +307,60 @@ uint8_t update_menu_state(char *string)
         value *= 10;
     }
     value = value + (string[length - 1]) - 0x30;
+    Softserial_print_byte(value);
+    Softserial_println("");
     return value;
 }
+
+static void display_eeprom_database()
+{
+    uint8_t i;
+    user tmp;
+    Softserial_println_flash(PSTR("\nSYSTEM SETTINGS"));
+    Softserial_print_flash(PSTR("Password-"));
+    if (app_dev.system_settings.pass_present)
+    {
+        Softserial_println_flash(PSTR("Present"));
+    }
+    else
+    {
+        Softserial_println_flash(PSTR("Absent"));
+    }
+    Softserial_print_flash(PSTR("Broadcast-"));
+    if (app_dev.system_settings.broadcast_mssg)
+    {
+        Softserial_println_flash(PSTR("Present"));
+    }
+    else
+    {
+        Softserial_println_flash(PSTR("Absent"));
+    }
+    Softserial_print("No User-");
+    Softserial_print_byte((uint8_t)app_dev.system_settings.no_users);
+    Softserial_println("");
+
+    Softserial_println_flash(PSTR("USERS"));
+    edb_open(EEPROM_USER_HEAD);
+    for (i = 1; i <= app_dev.system_settings.no_users; i++)
+    {
+        edb_readrec(i, EDB_REC tmp);
+        Softserial_print("Id-");
+        Softserial_print_byte(tmp.id);
+        Softserial_print(": ");
+        Softserial_println((char *)tmp.phone_no);
+        Softserial_println((char *)tmp.password);
+        Softserial_print_flash(PSTR("Password-"));
+        if (tmp.pwd_present)
+        {
+            Softserial_println_flash(PSTR("Present"));
+        }
+        else
+        {
+            Softserial_println_flash(PSTR("Absent"));
+        }
+    }
+}
+
 #if 0
 static void handle_menu_option(uint8_t option)
 {
@@ -471,6 +507,9 @@ static QState init(App *const me)
             Softserial_println("INIT APP TIME");
             QActive_arm((QActive *)me, 1 sec);
             initialize_system();
+#ifdef DEBUG
+            display_eeprom_database();
+#endif
             return Q_HANDLED();
         }
         case Q_TIMEOUT_SIG:
@@ -520,12 +559,14 @@ static QState app_idle(App *const me)
 #ifdef DEBUG
             Softserial_println("New SMS");
 #endif
-            //      QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_CHECK_PRESENCE, SMS_UNREAD);
+            QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_CHECK_PRESENCE, SMS_UNREAD);
             //QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_READ_REQUEST, 0x01);
             //return Q_HANDLED();
-            //return Q_TRAN(&reciever);
+            return Q_TRAN(&reciever);
+#if 0
             strcpy_P(me->current_phone_no, PSTR("+919964849934"));
             return Q_TRAN(&action_menu);
+#endif
         }
         case Q_EXIT_SIG:
         {
@@ -552,13 +593,13 @@ static QState reciever(App *const me)
         case EVENT_GSM_SMS_FOUND:
         {
 #ifdef DEBUG
-            Softserial_println("sms found");
+            //  Softserial_println("sms found");
 #endif
             /* Unread SMS found */
             index = Q_PAR(me);
             QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_READ_REQUEST, index);
 #ifdef DEBUG
-            Softserial_println("sms found end");
+            // Softserial_println("sms found end");
 #endif
             return Q_HANDLED();
         }
@@ -568,13 +609,14 @@ static QState reciever(App *const me)
             ///strcpy((char *)me->current_phone_no, (char *)me->buffer);
             //index = strlen((char *)me->buffer);
             // strcpy((char *)(char *)me->mssg_buf, (char *)(me->buffer + index + 1));
-#if 1
+#if 0
             return Q_TRAN(&validate);
 #endif
 #if 0
             strcpy_P(me->current_phone_no, PSTR("+919964849934"));
             return Q_TRAN(&action_status);
 #endif
+            return Q_TRAN(&action_menu);
         }
         case EVENT_GSM_SMS_NOT_FOUND:
         {
@@ -816,6 +858,31 @@ static QState action_off(App *const me)
     return Q_SUPER(&validate);
 }
 
+static void menu_settings_display()
+{
+    Softserial_print_byte(app_dev.session_expired);
+    Softserial_print(" -Userid-");
+    Softserial_print_byte(app_dev.current_userid);
+    Softserial_print(" -Session-");
+    if (app_dev.session_expired & _BV((app_dev.current_userid - 1)))
+    {
+        Softserial_print("Old   ");
+    }
+    else
+    {
+        Softserial_print("New  ");
+    }
+    Softserial_print("Menu-");
+    if (app_dev.session_expired & (_BV((app_dev.current_userid - 1)) << 4))
+    {
+        Softserial_println("2nd");
+    }
+    else
+    {
+        Softserial_println("1st");
+    }
+}
+
 /* TODO: make changes in the super state to handle sessions */
 static QState action_menu(App *const me)
 {
@@ -831,15 +898,18 @@ static QState action_menu(App *const me)
         }
         case Q_INIT_SIG:
         {
+            update_session_expired(1);
             /* Check for ongoing session */
-            if (!(me->session_expired & _BV(me->current_userid)))
+            if (!(me->session_expired & _BV((me->current_userid - 1))))
             {
                 QActive_post((QActive *)me, EVENT_APP_START_SESSION, 0);
             }
             else
             {
                 /* Menu has already been entered, so parse the command */
+                me->current_userid = 1;
                 Softserial_println("Old Session");
+                menu_settings_display();
                 return Q_TRAN(&menu_parse);
             }
             return Q_HANDLED();
@@ -850,7 +920,8 @@ static QState action_menu(App *const me)
             Softserial_println("New Session");
             update_session_expired(1);
             update_session_menu(0);
-            me->session_details[me->current_userid].session_timing = 5;
+            me->session_details[(me->current_userid - 1)].session_timing = 5;
+            me->session_details[(me->current_userid - 1)].menu_option = 0;
             me->mssg_buf[0] = ((uint16_t)&Menu_Strings & 0xFF);
             me->mssg_buf[1] = (((uint16_t)&Menu_Strings >> 8) & 0xFF);
             QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_SEND, 1);
@@ -882,37 +953,39 @@ static QState menu_parse(App *const me)
         }
         case Q_INIT_SIG:
         {
+            menu_settings_display();
+            Softserial_println((char *)me->mssg_buf);
             /* Check if the menu is entered for the first time */
-            if (!(me->session_expired & ((_BV(me->current_userid)) << 4)))
+            if (!(me->session_expired & ((_BV((me->current_userid - 1))) << 4)))
             {
-                me->session_details[me->current_userid].menu_option = update_menu_state((char *)(char *)me->mssg_buf);
-                switch (me->session_details[me->current_userid].menu_option)
-                {
-                    case CHANGE_PASS:
-                        Softserial_println("Password");
-                        return Q_TRAN(&change_pass);
-                    case ADD_NO:
-                        Softserial_println("Add no");
-                        return Q_TRAN(&add_no);
-                    case DEL_NO:
-                        Softserial_println("Del no");
-                        return Q_TRAN(&del_no);
-                    case EN_DIS_PASS:
-                        Softserial_println("EN Pass");
-                        return Q_TRAN(&en_dis_pwd);
-                    case EN_BROADCAST:
-                        Softserial_println("En braod");
-                        return Q_TRAN(&enable_broadcast);
-                    case STATUS_FREQ:
-                        Softserial_println("Status fr");
-                        return Q_TRAN(&status_freq);
-                    case SET_TIME:
-                        Softserial_println("Set time");
-                        return Q_TRAN(&set_time);
-                    default:
-                        Softserial_println("Generic");
-                        return Q_TRAN(&generic_menu_handler);
-                }
+                me->session_details[(me->current_userid - 1)].menu_option = update_menu_state((char *)me->mssg_buf);
+            }
+            switch (me->session_details[(me->current_userid - 1)].menu_option)
+            {
+                case CHANGE_PASS:
+                    Softserial_println("Password");
+                    return Q_TRAN(&change_pass);
+                case ADD_NO:
+                    Softserial_println("Add no");
+                    return Q_TRAN(&add_no);
+                case DEL_NO:
+                    Softserial_println("Del no");
+                    return Q_TRAN(&del_no);
+                case EN_DIS_PASS:
+                    Softserial_println("EN Pass");
+                    return Q_TRAN(&en_dis_pwd);
+                case EN_BROADCAST:
+                    Softserial_println("En braod");
+                    return Q_TRAN(&enable_broadcast);
+                case STATUS_FREQ:
+                    Softserial_println("Status fr");
+                    return Q_TRAN(&status_freq);
+                case SET_TIME:
+                    Softserial_println("Set time");
+                    return Q_TRAN(&set_time);
+                default:
+                    Softserial_println("Generic");
+                    return Q_TRAN(&generic_menu_handler);
             }
         }
     }
@@ -970,6 +1043,7 @@ static QState change_pass(App *const me)
     return Q_SUPER(&menu_parse);
 }
 
+/* TODO: check addno eeprom part */
 static QState add_no(App *const me)
 {
     char *pos;
@@ -978,7 +1052,7 @@ static QState add_no(App *const me)
     {
         case Q_ENTRY_SIG:
         {
-            if (!check_menu_entry)
+            if (!check_menu_entry())
             {
                 if (me->system_settings.no_users == MAX_NO_USERS)
                 {
@@ -996,7 +1070,6 @@ static QState add_no(App *const me)
             else
             {
                 /*  Add the No to EEPROM and update no of users */
-
                 /*  Check for space at the end or middle and terminate the string at its first occurence */
                 pos = strchr((char *)me->mssg_buf, ' ');
                 if (pos != NULL)
@@ -1011,8 +1084,15 @@ static QState add_no(App *const me)
                     me->system_settings.no_users++;
                     update_system_settings();
                     edb_open(EEPROM_USER_HEAD);
-                    //   User temp;
                     strcpy((char *)tmp.phone_no, (char *)me->mssg_buf);
+                    tmp.id = me->system_settings.no_users;
+                    tmp.password[0] = 0;
+                    tmp.pwd_present = 0;
+#if 0
+                    Softserial_println("add no settings")                    ;
+                    Softserial_println(me->mssg_buf);
+                    Softserial_println(tmp.phone_no);
+#endif
                     edb_appendrec(EDB_REC tmp);
                     edb_readrec(me->system_settings.no_users, EDB_REC tmp);
                     strcpy((char *)me->mssg_buf, (char *)tmp.phone_no);
@@ -1045,7 +1125,7 @@ static QState del_no(App *const me)
     {
         case Q_ENTRY_SIG:
         {
-            if (!check_menu_entry)
+            if (!check_menu_entry())
             {
                 if (me->system_settings.no_users > 1 )
                 {
@@ -1119,7 +1199,7 @@ static QState en_dis_pwd(App *const me)
     {
         case Q_ENTRY_SIG:
         {
-            if (!check_menu_entry)
+            if (!check_menu_entry())
             {
                 strcpy_P((char *)app_dev.mssg_buf, Rep4);
                 update_session_menu(1);
@@ -1179,7 +1259,7 @@ static QState enable_broadcast(App *const me)
     {
         case Q_ENTRY_SIG:
         {
-            if (!check_menu_entry)
+            if (!check_menu_entry())
             {
                 strcpy_P((char *)app_dev.mssg_buf, Rep5);
                 update_session_menu(1);
@@ -1239,7 +1319,7 @@ static QState status_freq(App *const me)
     {
         case Q_ENTRY_SIG:
         {
-            if (!check_menu_entry)
+            if (!check_menu_entry())
             {
                 strcpy_P((char *)app_dev.mssg_buf, Rep6);
                 update_session_menu(1);
@@ -1295,7 +1375,7 @@ static QState set_time(App *const me)
     {
         case Q_ENTRY_SIG:
         {
-            if (!check_menu_entry)
+            if (!check_menu_entry())
             {
                 QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_READ_EXTRACT_TIME, 0);
             }
@@ -1333,7 +1413,7 @@ static QState generic_menu_handler(App *const me)
     {
         case Q_ENTRY_SIG:
         {
-            if (!check_menu_entry)
+            if (!check_menu_entry())
             {
                 // Invalid Option Discontinue MENU Operations Alert the USER
                 strcpy_P((char *)me->mssg_buf, PSTR("INVALID_COMMAND"));
