@@ -18,7 +18,6 @@
 #define GSM_PWR_PORT    PORTB
 #define GSM_PWRKEY      1
 
-static QEvt l_blinkyQueue[10];
 static QEvt l_GSMQueue[10];
 static QEvt l_ComQueue[10];
 static QEvt l_AppQueue[10];
@@ -41,7 +40,6 @@ Q_ASSERT_COMPILE(QF_MAX_ACTIVE == Q_DIM(QF_active) - 1);
 uint8_t rx_buffer[100];
 uint8_t tx_buffer[100];
 
-const char test_string[] PROGMEM = "FLASH TEST OK";
 
 
 
@@ -53,7 +51,6 @@ int main(void)
     temp1 = MCUSR;
     temp = MCUSR;
     Softserial_begin(9600);
-    Softserial_println("STARTING");
     DDRD |= (1 << 7);
     PORTD |= (1 << 7);
     //DDRB = 0xff;
@@ -79,12 +76,12 @@ int main(void)
     GSM_ctor();
     Com_ctor();
     emon_ctor();
-    Softserial_println("ALL SYSTEMS INITIALIZED");
+    Softserial_println("SYSTEMS INITIALIZED");
     //Serial_print_string("Hi Lonewolf, we are ready to hunt \r\n");
     //Serial_print_string_flash(test_string);
     //PORTD ^= (1 << 7);
     //PORTD ^= (1 << 2);
     return QF_run(); /* transfer control to QF-nano */
-    Softserial_println("ERROR EXITING MAIN");
+    Softserial_println("EXITING MAIN");
     while(1);
 }

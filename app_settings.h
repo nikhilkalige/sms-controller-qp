@@ -25,6 +25,8 @@
 #define MAX_PASSWORD_LENGTH     4
 #define MAX_NO_LENGTH           14
 
+#define DEFAULT_STATUS_FREQ     5
+
 /******************************************************************
 *       All defnitions regarding the EEPROM are defined here
 *       EEPROM size is 1024 bytes for ATMEGA328p
@@ -37,7 +39,7 @@
 ******************************************************************/
 
 #define FIRST_BOOT_ADD 1023
-#define FIRST_BOOT_VALUE 0xAB
+#define FIRST_BOOT_VALUE 0xAA
 
 /*
     typedef struct user_tag
@@ -46,11 +48,13 @@
         unsigned char phone_no[15];
         unsigned char password[5];
         uint8_t pwd_present;
+        uint8_t broadcast_mssg;
+        uint8_t status_freq;
     } user;
     22 bytes per user, 4 users maximum
-    22 * 4 = 88 bytes
+    24 * 4 = 96 bytes
     10 bytes for the header
-    ie. 88 + 10 = 98 bytes
+    ie. 96 + 10 = 106 bytes
     Provide extra space for 2 more users
     98 + (22 * 2) = 142
 */
@@ -110,6 +114,9 @@ const char Op_13[] PROGMEM = "RESET\n";
 const char Resp[] PROGMEM = "<INDEX>";
 const char * Menu_Strings[] PROGMEM = { Op_1,Op_2,Op_3,Op_4,Op_5,Op_6,Op_7,Op_8,Op_9,Op_10,Op_11,Op_12,Op_13,Resp};
 */
+
+const char Invalid[] PROGMEM = "Invalid";
+
 const char Menu_Strings[] PROGMEM = "1.Change PASS\n2.Add NO\n3.Del NO\n4.En PASS\n5.En Broadcast\n6.Status Freq\n7.Set Time\n8.GPRS\n9.En TCP\n10.COSM\n11.Ping Freq\n12.Calibrate\n13.RESET\nReply <INDEX>";
 
 /*****************************************************************
@@ -140,7 +147,7 @@ const char Rep5[] PROGMEM = "<EN> for Enabling Broadcast\n<DI> for Disabling Bro
 /*****************************************************************
     STATUS FREQUENCY
 ******************************************************************/
-const char Rep6[] PROGMEM = "<MIN>\n<0> to disable Mssg\nEx <10> for 10 min, should be less than 255";
+const char Rep6[] PROGMEM = "<MIN>\nEx <10> for 10 min, should be less than 255";
 
 /*****************************************************************
     SET TIME

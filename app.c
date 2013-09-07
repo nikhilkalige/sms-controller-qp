@@ -170,7 +170,7 @@ static uint8_t validate_user(void)
         {
             Softserial_println("DI");
         }
-        Softserial_println(app_dev.current_phone_no);
+        Softserial_println((char *)app_dev.current_phone_no);
 #endif
         if (strstr((char *)app_dev.current_phone_no, (char *)tmp.phone_no) != NULL)
         {
@@ -352,142 +352,27 @@ static void display_eeprom_database()
         Softserial_print_flash(PSTR("Password-"));
         if (tmp.pwd_present)
         {
-            Softserial_println_flash(PSTR("Present"));
+            Softserial_print_flash(PSTR("Present"));
         }
         else
         {
-            Softserial_println_flash(PSTR("Absent"));
+            Softserial_print_flash(PSTR("Absent"));
         }
+        Softserial_print_flash(PSTR(" \tBroadcast-"));
+        if (tmp.broadcast_mssg)
+        {
+            Softserial_print_flash(PSTR("Present"));
+        }
+        else
+        {
+            Softserial_print_flash(PSTR("Absent"));
+        }
+        Softserial_print_flash(PSTR(" \tStatus Freq-"));
+        Softserial_print_byte(tmp.status_freq);
+        Softserial_println_flash(PSTR(" Minutes"));
     }
 }
 
-#if 0
-static void handle_menu_option(uint8_t option)
-{
-    switch (option)
-    {
-        case CHANGE_PASS:
-        {
-            strcpy_P((char *)app_dev.mssg_buf, (char *)Rep1);
-            //Module.Module_Status = SEND;
-            update_session_menu(1);
-            break;
-        }
-        case ADD_NO:
-        {
-            if (app_dev.system_settings.no_users == MAX_NO_USERS)
-            {
-                strcpy_P((char *)app_dev.mssg_buf, PSTR("MAX USERS EXCEEDED"));
-                update_session_menu(0);
-                update_session_expired(0);
-                //Module.Menu_User_No[0] = 0x00;
-            }
-            else
-            {
-                strcpy_P((char *)app_dev.mssg_buf, (char *)Rep2);
-                update_session_menu(1);
-            }
-            //Module.Module_Status = SEND;
-            break;
-        }
-
-        case DEL_NO:
-        {
-            //Extract the phone no list from Memory and index and send it
-            if (app_dev.system_settings.no_users > 1 )
-            {
-                app_dev.mssg_buf[0] = '\0';
-                char ch[2] = "1";
-                char phone[15];
-                uint8_t i;
-                User temp;
-                db.open(EEPROM_USER_HEAD);
-                for (i = 1; i < app_dev.system_settings.no_users; i++)
-                {
-                    strcat(app_dev.mssg_buf, ch);
-                    ch[0]++;
-                    strcat((char *)app_dev.mssg_buf, ".");
-                    db.readRec(i + 1, EDB_REC temp);
-                    strcat((char *)app_dev.mssg_buf, (char *)temp.Phone);
-                    strcat((char *)app_dev.mssg_buf, (char *)"\r");
-                }
-                strcat_P((char *)app_dev.mssg_buf, (char *)Rep3);
-                update_session_menu(1);
-            }
-            else
-            {
-                strcpy_P((char *)app_dev.mssg_buf, PSTR("No user to DELETE"));
-                //Exit from MENU
-                update_session_menu(0);
-                update_session_expired(0);
-                //Module.Menu_User_No[0] = 0x00;
-            }
-            //Module.Module_Status = SEND;
-            break;
-        }
-
-        case EN_DIS_PASS:
-        {
-            strcpy_P((char *)app_dev.mssg_buf, Rep4);
-            //Module.Module_Status = SEND;
-            update_session_menu(1);
-            break;
-        }
-
-        case EN_BROADCAST:
-        {
-            strcpy_P((char *)app_dev.mssg_buf, Rep5);
-            //Module.Module_Status = SEND;
-            update_session_menu(1);
-            break;
-        }
-
-        case STATUS_FREQ:
-        {
-            strcpy_P((char *)app_dev.mssg_buf, Rep6);
-            //Module.Module_Status = SEND;
-            update_session_menu(1);
-            break;
-        }
-
-        case SET_TIME:
-        {
-            if (gsm.SetTime())
-            {
-                app_dev.mssg_buf[0] = 0;
-                gsm.GetTime((char *)app_dev.mssg_buf, 20);
-                strcat((char *)app_dev.mssg_buf, "\n");
-                strcat_P((char *)app_dev.mssg_buf, Rep7);
-            }
-            else
-            {
-                strcpy_P((char *)app_dev.mssg_buf, PSTR("ERROR"));
-            }
-            //Module.Module_Status = SEND;
-            update_session_expired(0);
-            //Module.Menu_User_No[0] = 0x00;
-            update_session_menu(0);
-            break;
-        }
-
-        default:
-        {
-            // Invalid Option Discontinue MENU Operations Alert the USER
-            strcpy_P((char *)app_dev.mssg_buf, PSTR("INVALID_COMMAND"));
-            //Module.Module_Status = SEND;
-            // Set Menu to default
-            update_session_expired(0);
-            //Module.Menu_User_No[0] = 0x00;
-            update_session_menu(0);
-#ifdef SOFT_DEBUG
-            //Softserial_print(Module.Menu.Current_Option);
-            Softserial_println("    ERROR");
-#endif
-            break;
-        }
-    }
-}
-#endif
 /************************************************************************************************************************************
                                                     ***** State Machines *****
 ************************************************************************************************************************************/
@@ -996,11 +881,12 @@ static QState menu_parse(App *const me)
 static QState change_pass(App *const me)
 {
     char *pos;
+    user temp;
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
         {
-            if (!check_menu_entry)
+            if (!check_menu_entry())
             {
                 strcpy_P((char *)me->mssg_buf, Rep1);
                 update_session_menu(1);
@@ -1019,17 +905,15 @@ static QState change_pass(App *const me)
                 if ((length < (MAX_PASSWORD_LENGTH + 1)) && (length))
                 {
                     /* Change the PASSWORD */
-#if 0
-                    Pass temp;
-                    edb_open(EEPROM_PASS_HEAD);
-                    strcpy((char *)me->user_settings.password, (char *)me->mssg_buf);
-                    edb_updaterec(1, EDB_REC temp);
-#endif
+                    edb_open(EEPROM_USER_HEAD);
+                    edb_readrec(me->current_userid, EDB_REC temp);
+                    strcpy((char *)temp.password, (char *)me->mssg_buf);
+                    edb_updaterec(me->current_userid, EDB_REC temp);
                     strcat_P((char *)me->mssg_buf, PSTR(" is the NEW PASSWORD"));
                 }
                 else
                 {
-                    strcpy_P((char *)me->mssg_buf, PSTR("INVALID"));
+                    strcpy_P((char *)me->mssg_buf, Invalid);
                 }
                 update_session_expired(0);
             }
@@ -1085,9 +969,12 @@ static QState add_no(App *const me)
                     update_system_settings();
                     edb_open(EEPROM_USER_HEAD);
                     strcpy((char *)tmp.phone_no, (char *)me->mssg_buf);
+                    /* Initialize settings for new user */
                     tmp.id = me->system_settings.no_users;
                     tmp.password[0] = 0;
                     tmp.pwd_present = 0;
+                    tmp.broadcast_mssg = 0;
+                    tmp.status_freq = DEFAULT_STATUS_FREQ;
 #if 0
                     Softserial_println("add no settings")                    ;
                     Softserial_println(me->mssg_buf);
@@ -1100,7 +987,7 @@ static QState add_no(App *const me)
                 }
                 else
                 {
-                    strcpy_P((char *)me->mssg_buf, PSTR("INVALID"));
+                    strcpy_P((char *)me->mssg_buf, Invalid);
                 }
                 update_session_expired(0);
             }
@@ -1177,7 +1064,7 @@ static QState del_no(App *const me)
                 }
                 else
                 {
-                    strcpy_P((char *)me->mssg_buf, PSTR("INVALID"));
+                    strcpy_P((char *)me->mssg_buf, Invalid);
                 }
                 update_session_expired(0);
             }
@@ -1221,7 +1108,7 @@ static QState en_dis_pwd(App *const me)
                     /* Read current user from memory and update the settings TODO */
                     convert_uppercase((char *)me->mssg_buf);
                     edb_open(EEPROM_USER_HEAD);
-                    edb_readrec(me->current_userid - 1, EDB_REC temp);
+                    edb_readrec(me->current_userid, EDB_REC temp);
                     if (strstr_P((char *)me->mssg_buf, PSTR("EN")))
                     {
                         temp.pwd_present = 1;
@@ -1234,14 +1121,14 @@ static QState en_dis_pwd(App *const me)
                     }
                     else
                     {
-                        strcpy_P((char *)me->mssg_buf, PSTR("INVALID"));
+                        strcpy_P((char *)me->mssg_buf, Invalid);
                     }
                     edb_updaterec(me->current_userid, EDB_REC temp);
-                    update_system_settings();
+                    //update_system_settings();
                 }
                 else
                 {
-                    strcpy_P((char *)me->mssg_buf, PSTR("INVALID"));
+                    strcpy_P((char *)me->mssg_buf, Invalid);
                 }
                 update_session_expired(0);
             }
@@ -1260,6 +1147,7 @@ static QState enable_broadcast(App *const me)
 {
     char *pos;
     uint8_t length;
+    user temp;
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
@@ -1282,25 +1170,30 @@ static QState enable_broadcast(App *const me)
                 if ((length < 3) && (length))
                 {
                     convert_uppercase((char *)me->mssg_buf);
+                    edb_open(EEPROM_USER_HEAD);
+                    edb_readrec(me->current_userid, EDB_REC temp);
                     if (strstr_P((char *)me->mssg_buf, PSTR("EN")))
                     {
                         strcpy_P((char *)me->mssg_buf, PSTR("BROADCAST ENABLED"));
+                        temp.broadcast_mssg = 1;
                         me->system_settings.broadcast_mssg = true;
                     }
                     else if (strstr_P((char *)me->mssg_buf, PSTR("DI")))
                     {
+                        temp.broadcast_mssg = 0;
                         strcpy_P((char *)me->mssg_buf, PSTR("BROADCAST DISABLED"));
                         me->system_settings.broadcast_mssg = false;
                     }
                     else
                     {
-                        strcpy_P((char *)me->mssg_buf, PSTR("INVALID"));
+                        strcpy_P((char *)me->mssg_buf, Invalid);
                     }
-                    update_system_settings();
+                    edb_updaterec(me->current_userid, EDB_REC temp);
+                    //update_system_settings();
                 }
                 else
                 {
-                    strcpy_P((char *)me->mssg_buf, PSTR("INVALID"));
+                    strcpy_P((char *)me->mssg_buf, Invalid);
                 }
                 update_session_expired(0);
             }
@@ -1319,7 +1212,8 @@ static QState status_freq(App *const me)
 {
     char *pos;
     char num[4];
-    uint8_t length;
+    uint16_t length;
+    user temp;
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
@@ -1341,25 +1235,33 @@ static QState status_freq(App *const me)
                 length = strlen((char *)me->mssg_buf);
                 if ((length <= 3) && (length))
                 {
-                    uint16_t freq;
-                    if (extract_numbers((char *)me->mssg_buf, &freq))
+                    if (extract_numbers((char *)me->mssg_buf, &length))
                     {
-                        me->system_settings.status_freq = (uint8_t)freq;
-                        /*Module.Next_Status_Time = me->system_settings.status_freq * 60000;*/
-                        itoa(me->system_settings.status_freq, num, 10);
-                        strcpy_P((char *)me->mssg_buf, PSTR("Status Mssg will be sent at interval of "));
-                        strcat((char *)me->mssg_buf, num);
-                        strcat_P((char *)me->mssg_buf, PSTR(" Minutes"));
+                        if (length <= 255)
+                        {
+                            edb_open(EEPROM_USER_HEAD);
+                            edb_readrec(me->current_userid, EDB_REC temp);
+                            temp.status_freq = (uint8_t)length;
+                            edb_updaterec(me->current_userid, EDB_REC temp);
+                            itoa(length, num, 10);
+                            strcpy_P((char *)me->mssg_buf, PSTR("Status Mssg will be sent at interval of "));
+                            strcat((char *)me->mssg_buf, num);
+                            strcat_P((char *)me->mssg_buf, PSTR(" Minutes"));
+                        }
+                        else
+                        {
+                            strcpy_P((char *)me->mssg_buf, Invalid);
+                        }
                     }
                     else
                     {
-                        strcpy_P((char *)me->mssg_buf, PSTR("INVALID"));
+                        strcpy_P((char *)me->mssg_buf, Invalid);
                     }
                     update_system_settings();
                 }
                 else
                 {
-                    strcpy_P((char *)me->mssg_buf, PSTR("INVALID"));
+                    strcpy_P((char *)me->mssg_buf, Invalid);
                 }
                 update_session_expired(0);
             }
@@ -1380,10 +1282,10 @@ static QState set_time(App *const me)
     {
         case Q_ENTRY_SIG:
         {
-            // if (!check_menu_entry())
-            //  {
-            QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_READ_EXTRACT_TIME, 0);
-            // }
+            if (!check_menu_entry())
+            {
+                QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_READ_EXTRACT_TIME, 0);
+            }
             return Q_HANDLED();
         }
         case EVENT_GSM_SMS_READ_DONE:

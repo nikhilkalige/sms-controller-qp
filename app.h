@@ -42,6 +42,8 @@ typedef struct user_tag
     unsigned char phone_no[15];
     unsigned char password[5];
     uint8_t pwd_present;
+    uint8_t broadcast_mssg;
+    uint8_t status_freq;
 } user;
 
 typedef struct
