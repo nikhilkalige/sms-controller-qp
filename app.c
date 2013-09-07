@@ -228,7 +228,7 @@ static void initialize_system()
         /*  Add User  */
         user temp;
         temp.id = 1;
-        strcpy_P((char *)temp.phone_no, PSTR("+919964849934"));
+        strcpy_P((char *)temp.phone_no, PSTR("+919731472140"));
         strcpy_P((char *)temp.password, PSTR("1111"));
         Softserial_println((char *)temp.phone_no);
         Softserial_println((char *)temp.password);
@@ -515,9 +515,9 @@ static QState init(App *const me)
         case Q_TIMEOUT_SIG:
         {
             Softserial_println("INIT APP T RECIEVED");
-            //QActive_post((QActive *)&gsm_dev, EVENT_SYSTEM_GSM_INIT, 0);
-            return Q_TRAN(&set_time);
-            //return Q_HANDLED();
+            QActive_post((QActive *)&gsm_dev, EVENT_SYSTEM_GSM_INIT, 0);
+            //return Q_TRAN(&set_time);
+            return Q_HANDLED();
         }
         case EVENT_GSM_INIT_DONE:
         {
@@ -565,7 +565,7 @@ static QState app_idle(App *const me)
             //return Q_HANDLED();
             return Q_TRAN(&reciever);
 #if 0
-            strcpy_P(me->current_phone_no, PSTR("+919964849934"));
+            strcpy_P(me->current_phone_no, PSTR("+919731472140"));
             return Q_TRAN(&action_menu);
 #endif
         }
@@ -614,7 +614,7 @@ static QState reciever(App *const me)
             return Q_TRAN(&validate);
 #endif
 #if 0
-            strcpy_P(me->current_phone_no, PSTR("+919964849934"));
+            strcpy_P(me->current_phone_no, PSTR("+919731472140"));
             return Q_TRAN(&action_status);
 #endif
             return Q_TRAN(&action_menu);
@@ -1380,10 +1380,10 @@ static QState set_time(App *const me)
     {
         case Q_ENTRY_SIG:
         {
-           // if (!check_menu_entry())
-          //  {
-                QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_READ_EXTRACT_TIME, 0);
-           // }
+            // if (!check_menu_entry())
+            //  {
+            QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_READ_EXTRACT_TIME, 0);
+            // }
             return Q_HANDLED();
         }
         case EVENT_GSM_SMS_READ_DONE:
@@ -1391,10 +1391,16 @@ static QState set_time(App *const me)
             QActive_post((QActive *)&gsm_dev, EVENT_GSM_CLOCK_SET, 0);
             return Q_HANDLED();
         }
+        case EVENT_GSM_CLOCK_SET_DONE:
+        {
+            QActive_post((QActive *)&gsm_dev, EVENT_GSM_CLOCK_READ, 0);
+            return Q_HANDLED();
+        }
         case EVENT_GSM_CLOCK_READ_DONE:
         {
             strcat((char *)me->mssg_buf, "\n");
             strcat_P((char *)me->mssg_buf, Rep7);
+            QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_SEND, 0);
             return Q_HANDLED();
         }
         case EVENT_GSM_PARSING_ERROR:
@@ -1405,7 +1411,6 @@ static QState set_time(App *const me)
         case Q_EXIT_SIG:
         {
             update_session_expired(0);
-            QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_SEND, 0);
             return Q_HANDLED();
         }
     }
