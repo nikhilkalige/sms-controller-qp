@@ -18,10 +18,10 @@
 #define GSM_PWR_PORT    PORTB
 #define GSM_PWRKEY      1
 
-static QEvt l_GSMQueue[10];
-static QEvt l_ComQueue[10];
-static QEvt l_AppQueue[10];
-static QEvt l_emonQueue[10];
+static QEvt l_GSMQueue[5];
+static QEvt l_ComQueue[5];
+static QEvt l_AppQueue[5];
+static QEvt l_emonQueue[3];
 /* QF_active[] array defines all active object control blocks --------------*/
 
 QActiveCB const Q_ROM Q_ROM_VAR QF_active[] =
@@ -83,5 +83,5 @@ int main(void)
     //PORTD ^= (1 << 2);
     return QF_run(); /* transfer control to QF-nano */
     Softserial_println("EXITING MAIN");
-    while(1);
+    while (1);
 }

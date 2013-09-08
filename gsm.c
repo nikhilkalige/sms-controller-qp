@@ -16,6 +16,9 @@
 
 #define RX_NOT_STARTED      0
 #define RX_ALREADY_STARTED  1
+
+#define DEBUG_1        0
+#define DEBUG_2        0
 //uint8_t com_buff[COM_BUFFER_LENGTH];
 
 
@@ -246,7 +249,9 @@ static void comm_rx_handler(uint8_t size)
                         QActive_post((QActive *)&gsm_dev, parsed_command, ((uint32_t)message_id) << 16);
                         if (parsed_command == EVENT_GSM_ACK_RESPONSE)
                         {
+#ifdef DEBUG_2
                             Softserial_println("ack response");
+#endif
                             stop_command_timout();
                         }
                         break;
@@ -548,7 +553,9 @@ static QState inactive_super(Gsm *const me)
         }
         case EVENT_COM_DATA_AVAILABLE:
         {
+#ifdef DEBUG_2
             Softserial_println("data recieved");
+#endif
 #if 0
             uint8_t size = (uint8_t)Q_PAR(me);
             Softserial_print_byte(size);
@@ -606,7 +613,7 @@ static QState inactive_opencom(Gsm *const me)
     {
         case Q_ENTRY_SIG:
         {
-            QActive_post(gsm_dev.p_comm, EVENT_COM_OPEN_REQUEST, (uint16_t)GSM_BAUD);
+            QActive_post((QActive *)gsm_dev.p_comm, EVENT_COM_OPEN_REQUEST, (uint16_t)GSM_BAUD);
             return Q_HANDLED();
         }
         case EVENT_COM_OPEN_DONE:
@@ -770,7 +777,9 @@ static QState active_super(Gsm *const me)
         }
         case EVENT_COM_DATA_AVAILABLE:
         {
+#ifdef DEBUG_2
             Softserial_println("data recieved");
+#endif
             comm_rx_handler((uint8_t)Q_PAR(me));
             return Q_HANDLED();
         }
@@ -836,7 +845,9 @@ static QState active_idle(Gsm *const me)
         }
         case EVENT_GSM_SMS_READ_REQUEST:
         {
+#ifdef DEBUG_2
             Softserial_println("read request");
+#endif
             if (me->control.busy)
             {
                 QActive_post((QActive *)me->master, EVENT_GSM_BUSY, 0);
@@ -957,9 +968,11 @@ static QState active_network_status(Gsm *const me)
         {
             //me->control.response = (uint8_t)Q_PAR(me);
             me->control.response = (uint8_t)(Q_PAR(me) >> 16);
+#ifdef DEBUG_2
             Softserial_print("gsm event msg id= ");
             Softserial_print_byte(me->control.response);
             Softserial_println("");
+#endif
 #if 0
             uint8_t a = (uint8_t)Q_PAR(me);
             Softserial_print("gsm event msg id= ");
@@ -970,31 +983,41 @@ static QState active_network_status(Gsm *const me)
         }
         case EVENT_GSM_ACK_RESPONSE:
         {
+#ifdef DEBUG_2
             Softserial_println("ack event network");
+#endif
             if (me->control.response)
             {
                 switch (me->control.response)
                 {
                     case GSM_MSG_CREG_NETWORK_READY_LOCAL:
                     case GSM_MSG_CREG_NETWORK_READY_ROAMING:
+#ifdef DEBUG_1
                         Softserial_println("local-roaming");
+#endif
                         QActive_post((QActive *)me->master, EVENT_GSM_NETWORK_CONNECTED, 0);
                         return Q_TRAN(&active_idle);
                         break;
                     case GSM_MSG_CREG_NEWTWORK_SEARCHING_IN_IDLE:
                     case GSM_MSG_CREG_NETWORK_ACCESS_DENIED:
+#ifdef DEBUG_1
                         Softserial_println("idle-denied");
+#endif
                         QActive_post((QActive *)me->master, EVENT_GSM_NETWORK_ERROR, 0);
                         return Q_TRAN(&active_idle);
                         break;
                     case GSM_MSG_CREG_SEARCHING_NETWORK:
+#ifdef DEBUG_1
                         Softserial_println("searching");
+#endif
                         me->control.timeout = true;
                         QActive_arm((QActive *)me, 5 sec);
                         return Q_HANDLED();
                         break;
                     default:
+#ifdef DEBUG_1
                         Softserial_println("network error");
+#endif
                         QActive_post((QActive *)me->master, EVENT_GSM_NETWORK_ERROR, 0);
                         return Q_TRAN(&active_idle);
                         break;
@@ -1284,7 +1307,9 @@ static QState active_sms_read(Gsm *const me)
     {
         case Q_ENTRY_SIG:
         {
+#ifdef DEBUG_2
             Softserial_println("reading");
+#endif
             me->control.busy = true;
             me->control.current_op = GSM_OP_SMS;
             if (me->control.response)
@@ -1311,7 +1336,7 @@ static QState active_sms_read(Gsm *const me)
                 <CR><LF>+CMGR: "REC READ","+XXXXXXXXXXXX",,"02/03/18,09:54:28+40"<CR><LF>
                 There is SMS text<CR><LF>*/
 
-                p_char = (uint8_t *)Q_PAR(me);
+                p_char = (char *)Q_PAR(me);
                 p_char = memchr(p_char, ',', 23);
                 p_char1 = p_char + 2;
                 p_char = memchr(p_char1, '"', 15);
@@ -1350,7 +1375,9 @@ static QState active_sms_read(Gsm *const me)
         }
         case EVENT_GSM_ACK_RESPONSE:
         {
+#ifdef DEBUG_2
             Softserial_println("reading ack");
+#endif
             if (me->control.response)
             {
                 QActive_post((QActive *)me->master, EVENT_GSM_SMS_READ_DONE, 0);
@@ -1379,8 +1406,10 @@ static QState active_sms_extract_time(Gsm *const me)
     {
         case Q_ENTRY_SIG:
         {
+#ifdef DEBUG_2
             Softserial_println("reading");
             me->control.busy = true;
+#endif
             me->control.current_op = GSM_OP_SMS;
             strcpy((char *)index, "1");
             read_sms_command(index);
@@ -1424,13 +1453,15 @@ static QState active_sms_extract_time(Gsm *const me)
                     me->control.response = 0;
                 }
                 strcpy((char *)me->control.mssg_buf, (char *)p_char);
-                Softserial_println((char*)me->control.mssg_buf);
+                Softserial_println((char *)me->control.mssg_buf);
             }
             return Q_HANDLED();
         }
         case EVENT_GSM_ACK_RESPONSE:
         {
+#ifdef DEBUG_2
             Softserial_println("reading ack");
+#endif
             if (me->control.response)
             {
                 QActive_post((QActive *)me->master, EVENT_GSM_SMS_READ_DONE, 0);

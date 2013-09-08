@@ -39,7 +39,7 @@
 ******************************************************************/
 
 #define FIRST_BOOT_ADD 1023
-#define FIRST_BOOT_VALUE 0xAA
+#define FIRST_BOOT_VALUE 0xAB
 
 /*
     typedef struct user_tag

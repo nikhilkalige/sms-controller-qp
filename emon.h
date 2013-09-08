@@ -45,7 +45,6 @@ typedef struct emon_tag
 
 } emon;
 emon emon_dev;
-uint8_t abcd;
 void emon_ctor(void);
 void emon_config(QActive *master);
 #endif

@@ -125,6 +125,7 @@ enum system_events
     EVENT_APP_ACTION_MENU,
     EVENT_APP_ACTION_INVALID,
     EVENT_APP_START_SESSION,
+    EVENT_APP_SEND_BROADCAST,
 
     SERIAL_TRANSMIT_SIG,    // Serial transmit signal
     SERIAL_RECIEVE_SIG,     // Serial recieve signal
