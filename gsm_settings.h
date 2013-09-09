@@ -166,6 +166,8 @@ struct at_response_code gprs_table[] =
     (uint8_t *) "STATE: IP START", EVENT_GSM_GPRS_RESPONSE, GSM_GPRS_STATUS_START,
     (uint8_t *) "STATE: IP GPRSACT", EVENT_GSM_GPRS_RESPONSE, GSM_GPRS_STATUS_GPRSACT,
     (uint8_t *) "STATE: IP STATUS", EVENT_GSM_GPRS_RESPONSE, GSM_GPRS_STATUS_STATUS,
+    (uint8_t *) "CONNECT FAIL", EVENT_GSM_GPRS_RESPONSE, GSM_GPRS_CONNECT_ERROR,
+    (uint8_t *) "+PDP: DEACT", EVENT_GSM_GPRS_RESPONSE, GSM_GPRS_CLOSED,
     // array terminator !!!
     (uint8_t *) 0, 0, 0
 };
@@ -231,6 +233,7 @@ PROGMEM const char  _CCLK [] = "+CCLK";
 PROGMEM const char  CMGDA[] = "AT+CMGDA=\"DEL ALL\"\r\n";
 PROGMEM const char  CGATT[] = "AT+CGATT=1\r\n";
 PROGMEM const char  CSTT[] = "AT+CSTT=";
+PROGMEM const char  _CSTT[] = "AT+CSTT\r\n";
 PROGMEM const char  CIICR[] = "AT+CIICR\r\n";
 PROGMEM const char  CIPSTART[] = "AT+CIPSTART=";
 PROGMEM const char  CIPSEND[] = "AT+CIPSEND\r\n";

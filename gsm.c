@@ -1687,6 +1687,7 @@ static QState active_time_set(Gsm *const me)
     }
     return Q_SUPER(&active_super);
 }
+static QState active_gprs_move_initial(Gsm *const me);
 
 static QState active_gprs_super(Gsm *const me)
 {
@@ -1711,12 +1712,43 @@ static QState active_gprs_super(Gsm *const me)
             QActive_post((QActive *)me->master, EVENT_GSM_GPRS_FAILURE, 0);
             return Q_TRAN(&active_idle);
         }
+        case EVENT_GSM_GPRS_REOPEN:
+        {
+            return Q_TRAN(&active_gprs_move_initial);
+        }
+        case EVENT_GSM_GPRS_SETUP_DONE:
+        {
+            return Q_TRAN(&active_gprs_start);
+        }
         case Q_EXIT_SIG:
         {
             return Q_HANDLED();
         }
     }
     return Q_SUPER(&active_idle);
+}
+
+static QState active_gprs_move_initial(Gsm *const me)
+{
+    switch Q_SIG(me)
+    {
+        case Q_ENTRY_SIG:
+        {
+            send_command_timeout((uint8_t *)_CSTT, 6 sec, 1);
+            return Q_HANDLED();
+        }
+        case EVENT_GSM_ACK_RESPONSE:
+        {
+            QActive_post((QActive *)me, EVENT_GSM_GPRS_SETUP_DONE, 0);
+            return Q_TRAN(&active_gprs_super);
+        }
+        case Q_EXIT_SIG:
+        {
+            generic_exit_operations();
+            return Q_HANDLED();
+        }
+    }
+    return Q_SUPER(&active_gprs_super);
 }
 
 static QState active_gprs_setup_interim(Gsm *const me)
@@ -1882,6 +1914,10 @@ static QState active_gprs_open_socket(Gsm *const me)
                 QActive_post((QActive *)me->master, EVENT_GSM_GPRS_SOCKET_OPEN_DONE, 0);
                 return Q_TRAN(&active_idle);
             }
+            else
+            {
+                return Q_TRAN(&active_idle);
+            }
             return Q_HANDLED();
         }
         case Q_EXIT_SIG:
@@ -1957,7 +1993,7 @@ static QState active_gprs_send_data(Gsm *const me)
             me->control.response = (uint8_t)(Q_PAR(me) >> 16);
             if (me->control.response == GSM_GPRS_SEND_ACK)
             {
-                QActive_arm((QActive*)me, 15 sec);
+                QActive_arm((QActive *)me, 15 sec);
                 return Q_TRAN(&active_gprs_send_interim);
             }
             else if (me->control.response == GSM_GPRS_PROMPT)

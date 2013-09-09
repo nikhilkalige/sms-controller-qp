@@ -602,7 +602,7 @@ static QState update_server(App *const me)
             return Q_HANDLED();
         }
     }
-    return Q_SUPER(&QHsm_top);
+    return Q_SUPER(&app_idle);
 }
 
 static QState reciever(App *const me)
