@@ -157,7 +157,11 @@ struct at_response_code special_table[] =
 
 struct at_response_code acc_table[] =
 {
+    (uint8_t *)"> ", EVENT_GSM_GPRS_PROMPT, GSM_MSG_SMS_PROMPT,
     (uint8_t *)"+CCLK:", EVENT_GSM_CLOCK_RESPONSE, GSM_CLOCK_READ,
+    (uint8_t*) "CONNECT OK", EVENT_GSM_GRPS_CONNECT_RESPONSE, GSM_GPRS_CONNECT,
+    (uint8_t*) "CLOSE OK", EVENT_GSM_GRPS_CLOSE_RESPONSE, GSM_GPRS_CLOSE,
+    (uint8_t*) "SEND OK", EVENT_GSM_GPRS_SEND_ACK, GSM_GPRS_CLOSE,
     // array terminator !!!
     (uint8_t *) 0, 0, 0
 };
@@ -214,5 +218,6 @@ PROGMEM const char   CCLK[] = "AT+CCLK=";
 PROGMEM const char   CCLK_REQ [] = "AT+CCLK?\r\n";
 PROGMEM const char  _CCLK [] = "+CCLK";
 PROGMEM const char  CMGDA[] = "AT+CMGDA=\"DEL ALL\"\r\n";
+
 
 #endif                  /* gsm_settings.h */

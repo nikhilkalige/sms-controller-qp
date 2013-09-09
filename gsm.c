@@ -45,6 +45,12 @@ typedef struct Gsm_tag
 
 Gsm gsm_dev;
 
+PROGMEM const char  CGATT[] = "AT+CGATT=1\r\n";
+PROGMEM const char  CSTT[] = "AT+CSTT=";
+PROGMEM const char  CIICR[] = "AT+CIICR\r\n";
+PROGMEM const char  CIPSTART[] = "AT+CIPSTART=";
+PROGMEM const char  CIPSEND[] = "AT+CIPSEND\r\n";
+PROGMEM const char  CIPSHUT[] = "AT+CIPSHUT\r\n";
 
 static QState GSM_initial(Gsm *const me);
 static QState GSM_input(Gsm *const me);
@@ -110,8 +116,11 @@ static QState on_active(Gsm *const me);
 static QState on_active_cmd(Gsm *const me);
 
 
-
-
+static QState active_gprs_setup(Gsm *const me);
+static QState active_gprs_start(Gsm *const me);
+static QState active_gprs_open_socket(Gsm *const me);
+static QState active_gprs_send_data(Gsm *const me);
+static QState active_gprs_close_socket(Gsm *const me);
 
 /************************************************************************************************************************************
                                                     ***** Public Funtions *****
@@ -523,6 +532,37 @@ static void print_eventid(uint8_t id)
     Softserial_println("");
 }
 
+static void attach_gprs_command()
+{
+    send_command_timeout((uint8_t *)CGATT, 10 sec, 1);
+}
+static void set_gprs_parameters()
+{
+    send_command((uint8_t *)CSTT, 1);
+    send_command((uint8_t *)gsm_dev.control.mssg_buf, 0);
+    send_command_timeout((uint8_t *)"\r\n", 7 sec, 0);
+}
+static void start_gprs_command()
+{
+    send_command_timeout((uint8_t *)CIICR, 7 sec, 1);
+}
+static void open_tcp_socket_command()
+{
+    send_command((uint8_t *)CIPSTART, 1);
+    send_command((uint8_t *)gsm_dev.control.mssg_buf, 0);
+    send_command_timeout((uint8_t *)"\r\n", 7 sec, 0);
+}
+
+static void send_gprs_data()
+{
+    send_command_timeout((uint8_t *)CIPSEND, 7 sec, 1);
+}
+
+static void close_tcp_socket_command()
+{
+    send_command_timeout((uint8_t *)CIPSHUT, 3 sec, 1);
+}
+
 /************************************************************************************************************************************
                                                     ***** State Machines *****
 ************************************************************************************************************************************/
@@ -927,6 +967,66 @@ static QState active_idle(Gsm *const me)
         {
             QActive_post((QActive *)me->master, EVENT_GSM_SMS_NEW_RECIEVED, 0);
             return Q_HANDLED();
+        }
+        case EVENT_GSM_GPRS_START:
+        {
+            if (me->control.busy)
+            {
+                QActive_post((QActive *)me->master, EVENT_GSM_BUSY, 0);
+                return Q_HANDLED();
+            }
+            else
+            {
+                return Q_TRAN(&active_gprs_start);
+            }
+        }
+        case EVENT_GSM_GPRS_SOCKET_OPEN:
+        {
+            if (me->control.busy)
+            {
+                QActive_post((QActive *)me->master, EVENT_GSM_BUSY, 0);
+                return Q_HANDLED();
+            }
+            else
+            {
+                return Q_TRAN(&active_gprs_open_socket);
+            }
+        }
+        case EVENT_GSM_GPRS_SEND_DATA:
+        {
+            if (me->control.busy)
+            {
+                QActive_post((QActive *)me->master, EVENT_GSM_BUSY, 0);
+                return Q_HANDLED();
+            }
+            else
+            {
+                return Q_TRAN(&active_gprs_send_data);
+            }
+        }
+        case EVENT_GSM_GPRS_SETUP:
+        {
+            if (me->control.busy)
+            {
+                QActive_post((QActive *)me->master, EVENT_GSM_BUSY, 0);
+                return Q_HANDLED();
+            }
+            else
+            {
+                return Q_TRAN(&active_gprs_setup);
+            }
+        }
+        case EVENT_GSM_GPRS_SOCKET_CLOSE:
+        {
+            if (me->control.busy)
+            {
+                QActive_post((QActive *)me->master, EVENT_GSM_BUSY, 0);
+                return Q_HANDLED();
+            }
+            else
+            {
+                return Q_TRAN(&active_gprs_close_socket);
+            }
         }
         case Q_EXIT_SIG:
         {
@@ -1579,6 +1679,194 @@ static QState active_time_set(Gsm *const me)
     return Q_SUPER(&active_super);
 }
 
+static QState active_gprs_super(Gsm *const me)
+{
+    switch (Q_SIG(me))
+    {
+        case Q_ENTRY_SIG:
+        {
+            return Q_HANDLED();
+        }
+        case Q_INIT_SIG:
+        {
+            return Q_HANDLED();
+        }
+        case Q_TIMEOUT_SIG:
+        case EVENT_GSM_ERROR_RESPONSE:
+        {
+            QActive_post((QActive *)me->master, EVENT_GSM_GPRS_FAILURE, 0);
+            return Q_TRAN(&active_idle);
+        }
+        case Q_EXIT_SIG:
+        {
+            return Q_HANDLED();
+        }
+    }
+    return Q_SUPER(&active_idle);
+}
+
+static QState active_gprs_setup(Gsm *const me)
+{
+    switch (Q_SIG(me))
+    {
+        case Q_ENTRY_SIG:
+        {
+            me->control.busy = true;
+            me->control.current_op = GSM_OP_ACC;
+            me->control.timeout = 1;
+            attach_gprs_command();
+            return Q_HANDLED();
+        }
+        case Q_INIT_SIG:
+        {
+            return Q_HANDLED();
+        }
+        case EVENT_GSM_ACK_RESPONSE:
+        {
+            if (me->control.timeout)
+            {
+                me->control.timeout = 0;
+                set_gprs_parameters();
+                return Q_HANDLED();
+            }
+            else
+            {
+                QActive_post((QActive *)me->master, EVENT_GSM_GPRS_SETUP_DONE, 0);
+                return Q_TRAN(&active_idle);
+            }
+        }
+        case Q_EXIT_SIG:
+        {
+            generic_exit_operations();
+            return Q_HANDLED();
+        }
+    }
+    return Q_SUPER(&active_gprs_super);
+}
+
+static QState active_gprs_start(Gsm *const me)
+{
+    switch (Q_SIG(me))
+    {
+        case Q_ENTRY_SIG:
+        {
+            me->control.busy = true;
+            me->control.current_op = GSM_OP_ACC;
+            start_gprs_command();
+            return Q_HANDLED();
+        }
+        case Q_INIT_SIG:
+        {
+            return Q_HANDLED();
+        }
+        case EVENT_GSM_ACK_RESPONSE:
+        {
+            QActive_post((QActive *)me->master, EVENT_GSM_GPRS_START_DONE, 0);
+            return Q_TRAN(&active_idle);
+        }
+        case Q_EXIT_SIG:
+        {
+            generic_exit_operations();
+            return Q_HANDLED();
+        }
+    }
+    return Q_SUPER(&active_gprs_super);
+}
+
+static QState active_gprs_open_socket(Gsm *const me)
+{
+    switch (Q_SIG(me))
+    {
+        case Q_ENTRY_SIG:
+        {
+            me->control.busy = true;
+            me->control.current_op = GSM_OP_ACC;
+            open_tcp_socket_command();
+            return Q_HANDLED();
+        }
+        case Q_INIT_SIG:
+        {
+            return Q_HANDLED();
+        }
+        case EVENT_GSM_ACK_RESPONSE:
+        {
+            return Q_HANDLED();
+        }
+        case EVENT_GSM_GRPS_CONNECT_RESPONSE:
+        {
+            QActive_post((QActive *)me->master, EVENT_GSM_GPRS_SOCKET_OPEN_DONE, 0);
+            return Q_TRAN(&active_idle);
+        }
+        case Q_EXIT_SIG:
+        {
+            generic_exit_operations();
+            return Q_HANDLED();
+        }
+    }
+    return Q_SUPER(&active_gprs_super);
+}
+
+static QState active_gprs_send_data(Gsm *const me)
+{
+    switch (Q_SIG(me))
+    {
+        case Q_ENTRY_SIG:
+        {
+            me->control.busy = true;
+            me->control.current_op = GSM_OP_ACC;
+            return Q_HANDLED();
+        }
+        case Q_INIT_SIG:
+        {
+            return Q_HANDLED();
+        }
+        case EVENT_GSM_GPRS_PROMPT:
+        {
+            send_command_timeout((uint8_t *)me->control.mssg_buf, 5 sec, 0);
+            return Q_HANDLED();
+        }
+        case EVENT_GSM_GPRS_SEND_ACK:
+        {
+            QActive_post((QActive*)me->master, EVENT_GSM_GPRS_SEND_DATA_DONE, 0);
+            return Q_TRAN(&active_idle);
+        }
+        case Q_EXIT_SIG:
+        {
+            generic_exit_operations();
+            return Q_HANDLED();
+        }
+    }
+    return Q_SUPER(&active_gprs_super);
+}
+
+static QState active_gprs_close_socket(Gsm *const me)
+{
+    switch (Q_SIG(me))
+    {
+        case Q_ENTRY_SIG:
+        {
+            me->control.busy = true;
+            me->control.current_op = GSM_OP_ACC;
+            close_tcp_socket_command();
+            return Q_HANDLED();
+        }
+        case Q_INIT_SIG:
+        {
+            return Q_HANDLED();
+        }
+        case EVENT_GSM_GRPS_CLOSE_RESPONSE:
+        {
+            QActive_post((QActive *)me->master, EVENT_GSM_GPRS_SOCKET_CLOSE_DONE, 0);
+            return Q_TRAN(&active_idle);
+        }
+        case Q_EXIT_SIG:
+        {
+            generic_exit_operations();
+            return Q_HANDLED();
+        }
+    }
+    return Q_SUPER(&active_gprs_super);
+}
 
 
 

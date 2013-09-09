@@ -50,6 +50,7 @@ static QState enable_broadcast(App *const me);
 static QState status_freq(App *const me);
 static QState set_time(App *const me);
 static QState generic_menu_handler(App *const me);
+static QState update_server(App *const me);
 //extern gsm_driver_messages SMS_UNREAD;
 
 /************************************************************************************************************************************
@@ -445,8 +446,28 @@ static QState init(App *const me)
             /* Registration Complete */
             me->mssg_buf[0] = ((uint16_t)&Menu_Strings & 0xFF);
             me->mssg_buf[1] = (((uint16_t)&Menu_Strings >> 8) & 0xFF);
+            /* TODO: setup proper conditions to enter gprs setup */
+            strcpy_P((char *)me->mssg_buf, PSTR("\"airtelgprs.com\",\"guest\",\"guest\""));
+            if (1)
+            {
+                QActive_post((QActive *)&gsm_dev, EVENT_GSM_GPRS_SETUP, 0);
+                return Q_HANDLED();
+            }
+            else
+            {
+                return Q_TRAN(&app_idle);
+            }
+        }
+        case EVENT_GSM_GPRS_FAILURE:
+        {
+            Softserial_println("GPRS FAILURE");
+            return Q_HANDLED();
+        }
+        case EVENT_GSM_GPRS_SETUP_DONE:
+        {
             return Q_TRAN(&app_idle);
         }
+
     }
     return Q_SUPER(&QHsm_top);
 }
@@ -483,10 +504,11 @@ static QState app_idle(App *const me)
         case Q_TIMEOUT_SIG:
         {
             Softserial_println("timeout");
-            QActive_arm((QActive *)me, 60 sec);
-            update_session_timings();
-            status_freq_updates();
-            return Q_HANDLED();
+            QActive_arm((QActive *)me, 30 sec);
+            //update_session_timings();
+            //status_freq_updates();
+            return Q_TRAN(&update_server);
+            //return Q_HANDLED();
         }
         case EVENT_APP_SEND_BROADCAST:
         {
@@ -497,6 +519,49 @@ static QState app_idle(App *const me)
             edb_readrec((uint8_t)Q_PAR(me), EDB_REC temp);
             strcpy((char *)app_dev.current_phone_no, (char *)temp.phone_no);
             return Q_TRAN(&action_status);
+        }
+        case Q_EXIT_SIG:
+        {
+            return Q_HANDLED();
+        }
+    }
+    return Q_SUPER(&QHsm_top);
+}
+
+static QState update_server(App *const me)
+{
+    switch (Q_SIG(me))
+    {
+        case Q_ENTRY_SIG:
+        {
+            QActive_post((QActive*)&gsm_dev, EVENT_GSM_GPRS_START, 0);
+            return Q_HANDLED();
+        }
+        case Q_INIT_SIG:
+        {
+            return Q_HANDLED();
+        }
+        case EVENT_GSM_GPRS_START_DONE:
+        {
+            //strcpy((char*)me->mssg_buf, PSTR("\"TCP\",\"https://api.xively.com\",\"80\""));
+            strcpy_P((char *)me->mssg_buf, PSTR("\"TCP\",\"https://api.xively.com/v2/feeds/857354970.csv\",\"80\""));
+            QActive_post((QActive *)&gsm_dev, EVENT_GSM_GPRS_SOCKET_OPEN, 0);
+            return Q_HANDLED();
+        }
+        case EVENT_GSM_GPRS_SOCKET_OPEN_DONE:
+        {
+            strcpy_P((char *)me->mssg_buf, PSTR("PUT HTTP/1.1\r\nX-ApiKey:vR6vXl45rvGKy33M7gOOj9A7b7a6ttH1pn8zx5nDDClyetUn\r\nBlue,42"));
+            QActive_post((QActive *)&gsm_dev, EVENT_GSM_GPRS_SEND_DATA, 0);
+            return Q_HANDLED();
+        }
+        case EVENT_GSM_GPRS_SEND_DATA_DONE:
+        {
+            QActive_post((QActive *)&gsm_dev, EVENT_GSM_GPRS_SOCKET_CLOSE, 0);
+            return Q_HANDLED();
+        }
+        case EVENT_GSM_GPRS_SOCKET_CLOSE_DONE:
+        {
+            return Q_TRAN(&app_idle);
         }
         case Q_EXIT_SIG:
         {
