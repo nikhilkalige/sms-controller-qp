@@ -465,6 +465,7 @@ static QState init(App *const me)
         }
         case EVENT_GSM_GPRS_SETUP_DONE:
         {
+            QActive_post((QActive *)&gsm_dev, EVENT_GSM_GPRS_START, 0);
             return Q_TRAN(&app_idle);
         }
 
@@ -483,7 +484,7 @@ static QState app_idle(App *const me)
     {
         case Q_ENTRY_SIG:
         {
-            QActive_arm((QActive *)me, 60 sec);
+            QActive_arm((QActive *)me, 30 sec);
             return Q_HANDLED();
         }
         case EVENT_GSM_SMS_NEW_RECIEVED:
@@ -530,12 +531,22 @@ static QState app_idle(App *const me)
 
 static QState update_server(App *const me)
 {
+#if 1
+    Softserial_print("s:up ser");
+    print_eventid(Q_SIG(me));
+#endif
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
         {
-            QActive_post((QActive*)&gsm_dev, EVENT_GSM_GPRS_START, 0);
+            me->i_generic = 0;
+#if 0
+            QActive_post((QActive *)&gsm_dev, EVENT_GSM_GPRS_START, 0);
+#endif
+            strcpy_P((char *)me->mssg_buf, PSTR("\"TCP\",\"api.xively.com\",\"80\""));
+            QActive_post((QActive *)&gsm_dev, EVENT_GSM_GPRS_SOCKET_OPEN, 0);
             return Q_HANDLED();
+
         }
         case Q_INIT_SIG:
         {
@@ -544,14 +555,37 @@ static QState update_server(App *const me)
         case EVENT_GSM_GPRS_START_DONE:
         {
             //strcpy((char*)me->mssg_buf, PSTR("\"TCP\",\"https://api.xively.com\",\"80\""));
-            strcpy_P((char *)me->mssg_buf, PSTR("\"TCP\",\"https://api.xively.com/v2/feeds/857354970.csv\",\"80\""));
+            strcpy_P((char *)me->mssg_buf, PSTR("\"TCP\",\"api.xively.com\",\"80\""));
             QActive_post((QActive *)&gsm_dev, EVENT_GSM_GPRS_SOCKET_OPEN, 0);
             return Q_HANDLED();
         }
         case EVENT_GSM_GPRS_SOCKET_OPEN_DONE:
         {
-            strcpy_P((char *)me->mssg_buf, PSTR("PUT HTTP/1.1\r\nX-ApiKey:vR6vXl45rvGKy33M7gOOj9A7b7a6ttH1pn8zx5nDDClyetUn\r\nBlue,42"));
+            //strcpy_P((char *)me->mssg_buf, PSTR("PUT HTTP/1.1\r\nX-ApiKey:vR6vXl45rvGKy33M7gOOj9A7b7a6ttH1pn8zx5nDDClyetUn\r\nBlue,42"));
             QActive_post((QActive *)&gsm_dev, EVENT_GSM_GPRS_SEND_DATA, 0);
+            return Q_HANDLED();
+        }
+        case EVENT_GSM_GPRS_BUFFER_EMPTY:
+        {
+            switch (me->i_generic)
+            {
+                case 0:
+                    strcpy_P((char *)me->mssg_buf, PSTR("PUT /v2/feeds/1219288374.csv HTTP/1.1\r\nHost: api.xively.com\r\n"));
+                    QActive_post((QActive *)&gsm_dev, EVENT_GSM_GPRS_BUFFER , 1);
+                    break;
+                case 1:
+                    strcpy_P((char *)me->mssg_buf, PSTR("X-ApiKey: oBGiHwSDFY5WnKa15Ai8IRLfGzllswX4gfQRGZUb7VeFKvJs\r\n"));
+                    QActive_post((QActive *)&gsm_dev, EVENT_GSM_GPRS_BUFFER , 1);
+                    break;
+                case 2:
+                    strcpy_P((char *)me->mssg_buf, PSTR("Content-Length: 27\r\n\r\nB,22\r\nY,62\r\nR,93\r\nI,52\r\nM,0"));
+                    QActive_post((QActive *)&gsm_dev, EVENT_GSM_GPRS_BUFFER , 1);
+                    break;
+                case 3:
+                    QActive_post((QActive *)&gsm_dev, EVENT_GSM_GPRS_BUFFER , 0);
+                    break;
+            }
+            me->i_generic++;
             return Q_HANDLED();
         }
         case EVENT_GSM_GPRS_SEND_DATA_DONE:
