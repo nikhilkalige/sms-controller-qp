@@ -6,3 +6,6 @@ debug/*
 *.swp
 .SyncArchive/*
 edb_example.c
+gsm_serial.sublime-project
+gsm_serial.sublime-workspace
+events
