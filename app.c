@@ -465,7 +465,7 @@ static QState init(App *const me)
         }
         case EVENT_GSM_GPRS_SETUP_DONE:
         {
-            QActive_post((QActive *)&gsm_dev, EVENT_GSM_GPRS_START, 0);
+           // QActive_post((QActive *)&gsm_dev, EVENT_GSM_GPRS_START, 0);
             return Q_TRAN(&app_idle);
         }
 
@@ -484,7 +484,7 @@ static QState app_idle(App *const me)
     {
         case Q_ENTRY_SIG:
         {
-            QActive_arm((QActive *)me, 30 sec);
+            QActive_arm((QActive *)me, 5 sec);
             return Q_HANDLED();
         }
         case EVENT_GSM_SMS_NEW_RECIEVED:
