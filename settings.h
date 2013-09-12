@@ -236,7 +236,8 @@ enum gsm_driver_messages
     GSM_GPRS_SEND_ACK,
     GSM_GPRS_PROMPT,
     GSM_GPRS_CONNECT_ERROR,
-    GSM_GPRS_CLOSED
+    GSM_GPRS_CLOSED,
+    GSM_GPRS_TCP_CLOSED
 
 };
 

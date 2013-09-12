@@ -590,7 +590,7 @@ static QState update_server(App *const me)
         }
         case EVENT_GSM_GPRS_SEND_DATA_DONE:
         {
-            QActive_post((QActive *)&gsm_dev, EVENT_GSM_GPRS_SOCKET_CLOSE, 0);
+            //QActive_post((QActive *)&gsm_dev, EVENT_GSM_GPRS_SOCKET_CLOSE, 0);
             return Q_HANDLED();
         }
         case EVENT_GSM_GPRS_SOCKET_CLOSE_DONE:
