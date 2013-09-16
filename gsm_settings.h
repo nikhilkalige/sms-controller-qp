@@ -38,7 +38,8 @@ enum gsm_operations
     GSM_OP_NONE = 1,
     GSM_OP_SMS,
     GSM_OP_NETWORK,
-    GSM_OP_ACC
+    GSM_OP_ACC,
+    GSM_OP_GPRS
 };
 #if 0
 enum gsm_driver_messages
@@ -139,12 +140,12 @@ struct at_response_code frc_table[] =
 
 struct at_response_code sms_table[] =
 {
-    (uint8_t *)"> ", EVENT_GSM_SMS_RESPONSE, GSM_MSG_SMS_PROMPT,
+    /*(uint8_t *)"> ", EVENT_GSM_SMS_RESPONSE, GSM_MSG_SMS_PROMPT,
     (uint8_t *)"+CMGS:", EVENT_GSM_SMS_RESPONSE, GSM_MSG_SMS_QUEUED,
     (uint8_t *)"+CMGR: \"REC UNREAD\"", EVENT_GSM_SMS_RESPONSE, GSM_MSG_SMS_REC_UNREAD,
     (uint8_t *)"+CMGR: \"REC READ\"", EVENT_GSM_SMS_RESPONSE, GSM_MSG_SMS_REC_READ,
     (uint8_t *)"+CMGR:", EVENT_GSM_SMS_RESPONSE,  GSM_MSG_SMS_UNKOWN_MESAGE,
-    (uint8_t *)"+CMGL:", EVENT_GSM_SMS_RESPONSE, GSM_MSG_SMS_LIST,
+    (uint8_t *)"+CMGL:", EVENT_GSM_SMS_RESPONSE, GSM_MSG_SMS_LIST,*/
     // array terminator !!!
     (uint8_t *) 0, 0, 0
 };
@@ -153,6 +154,26 @@ struct at_response_code sms_table[] =
 struct at_response_code special_table[] =
 {
     (uint8_t *)"> ", EVENT_GSM_SMS_RESPONSE, GSM_MSG_SMS_PROMPT
+};
+
+/* 160  bytes of string */
+struct at_response_code gprs_table[] =
+{
+    (uint8_t *)"> ", EVENT_GSM_GPRS_RESPONSE, GSM_GPRS_PROMPT,
+    (uint8_t *) "CONNECT OK", EVENT_GSM_GPRS_RESPONSE, GSM_GPRS_CONNECT,
+    (uint8_t *) "SHUT OK", EVENT_GSM_GPRS_RESPONSE, GSM_GPRS_CLOSE,
+    (uint8_t *) "SEND OK", EVENT_GSM_GPRS_RESPONSE, GSM_GPRS_SEND_ACK,
+    (uint8_t *) "CLOSE OK", EVENT_GSM_GPRS_RESPONSE, GSM_GPRS_CLOSED,
+    (uint8_t *) "STATE: IP INITIAL", EVENT_GSM_GPRS_STATUS_RESPONSE, GSM_GPRS_STATUS_INITIAL,
+    (uint8_t *) "STATE: IP START", EVENT_GSM_GPRS_STATUS_RESPONSE, GSM_GPRS_STATUS_START,
+    (uint8_t *) "STATE: IP GPRSACT", EVENT_GSM_GPRS_STATUS_RESPONSE, GSM_GPRS_STATUS_GPRSACT,
+    (uint8_t *) "STATE: IP STATUS", EVENT_GSM_GPRS_STATUS_RESPONSE, GSM_GPRS_STATUS_STATUS,
+    (uint8_t *) "CONNECT FAIL", EVENT_GSM_GPRS_STATUS_RESPONSE, GSM_GPRS_CONNECT_ERROR,
+    (uint8_t *) "STATE: PDP DEACT", EVENT_GSM_GPRS_STATUS_RESPONSE, GSM_GPRS_CLOSED,
+    (uint8_t *) "STATE: IP CONFIG", EVENT_GSM_GPRS_STATUS_RESPONSE, GSM_GPRS_STATUS_STATUS,
+    (uint8_t *) "STATE: TCP CLOSED", EVENT_GSM_GPRS_STATUS_RESPONSE, GSM_GPRS_TCP_CLOSED,
+    // array terminator !!!
+    (uint8_t *) 0, 0, 0
 };
 
 struct at_response_code acc_table[] =
@@ -214,5 +235,15 @@ PROGMEM const char   CCLK[] = "AT+CCLK=";
 PROGMEM const char   CCLK_REQ [] = "AT+CCLK?\r\n";
 PROGMEM const char  _CCLK [] = "+CCLK";
 PROGMEM const char  CMGDA[] = "AT+CMGDA=\"DEL ALL\"\r\n";
+PROGMEM const char  CGATT[] = "AT+CGATT=1\r\n";
+PROGMEM const char  CSTT[] = "AT+CSTT=";
+PROGMEM const char  _CSTT[] = "AT+CSTT\r\n";
+PROGMEM const char  CIICR[] = "AT+CIICR\r\n";
+PROGMEM const char  CIPSTART[] = "AT+CIPSTART=";
+PROGMEM const char  CIPSEND[] = "AT+CIPSEND\r\n";
+PROGMEM const char  CIPSHUT[] = "AT+CIPSHUT\r\n";
+PROGMEM const char  CIPSTATUS[] = "AT+CIPSTATUS\r\n";
+PROGMEM const char  CIFSR[] = "AT+CIFSR\r\n";
+PROGMEM const char  CIPCLOSE[] = "AT+CIPCLOSE\r\n";
 
 #endif                  /* gsm_settings.h */
