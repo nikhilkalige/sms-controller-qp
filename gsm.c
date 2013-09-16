@@ -17,8 +17,8 @@
 #define RX_NOT_STARTED      0
 #define RX_ALREADY_STARTED  1
 
-#define DEBUG_1        1
-#define DEBUG_2        1
+#define DEBUG_1        0
+#define DEBUG_2        0
 //uint8_t com_buff[COM_BUFFER_LENGTH];
 
 

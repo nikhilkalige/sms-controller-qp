@@ -153,6 +153,8 @@ enum system_events
     GSM_DONE_SIG,           // GSM Finished processing
     GSM_SUCCESS_EVENT,
     GSM_FAILURE_EVENT,
+    EVENT_APP_STATUS_READ_DONE,
+    EVENT_APP_STATUS_READ,
     MAX_PUB_SIG,            // the last published signal
 };
 #endif
@@ -237,7 +239,8 @@ enum gsm_driver_messages
     GSM_GPRS_PROMPT,
     GSM_GPRS_CONNECT_ERROR,
     GSM_GPRS_CLOSED,
-    GSM_GPRS_TCP_CLOSED
+    GSM_GPRS_TCP_CLOSED,
+
 
 };
 

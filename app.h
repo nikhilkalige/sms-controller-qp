@@ -72,10 +72,12 @@ typedef struct App_tag
     unsigned char mssg_buf[75];
     uint8_t motor_on;
     uint16_t defered_event;
+    uint8_t user_gprs_updates;
     uint8_t i_generic;
     uint8_t current_userid;
     uint8_t session_expired;
     user_session session_details[4];
+    QStateHandler history;
 } App;
 
 App app_dev;

@@ -16,13 +16,14 @@
 #include "util.h"
 #include "app_settings.h"
 
-#define SOFT_DEBUG 1
-#define DEBUG 1
+#define GPRS        0
+#define SOFT_DEBUG  1
+#define DEBUG       1
 
-#define VRED    1
-#define VYELLOW 1
-#define VBLUE   1
-#define IRMS    1
+#define VRED        1
+#define VYELLOW     1
+#define VBLUE       1
+#define IRMS        1
 
 #define PORT_MOTOR_ON   PORTD
 #define PORT_MOTOR_OFF  PORTD
@@ -41,6 +42,8 @@ static QState action_menu(App *const me);
 static QState action_on(App *const me);
 static QState action_off(App *const me);
 static QState menu_parse(App *const me);
+static QState get_status(App *const me);
+
 
 static QState change_pass(App *const me);
 static QState add_no(App *const me);
@@ -51,6 +54,8 @@ static QState status_freq(App *const me);
 static QState set_time(App *const me);
 static QState generic_menu_handler(App *const me);
 static QState update_server(App *const me);
+static QState send_broadcast(App *const me);
+
 //extern gsm_driver_messages SMS_UNREAD;
 
 /************************************************************************************************************************************
@@ -230,16 +235,18 @@ static void initialize_system()
 
         /*  Add User  */
         temp.id = 1;
-        strcpy_P((char *)temp.phone_no, PSTR("+919731472140"));
+        strcpy_P((char *)temp.phone_no, PSTR("+919964849934"));
         strcpy_P((char *)temp.password, PSTR("1111"));
         Softserial_println((char *)temp.phone_no);
         Softserial_println((char *)temp.password);
         temp.pwd_present = 0;
+        temp.broadcast_mssg = 1;
+        temp.status_freq = 1;
         edb_open(EEPROM_USER_HEAD);
         edb_appendrec(EDB_REC temp);
 
         tmp_1.no_users = 1;
-        tmp_1.broadcast_mssg = 0;
+        tmp_1.broadcast_mssg = 1;
         edb_open(EEPROM_SETTINGS_HEAD);
         edb_appendrec(EDB_REC tmp_1);
 
@@ -392,9 +399,13 @@ static void status_freq_updates()
                 edb_open(EEPROM_USER_HEAD);
                 edb_readrec(i + 1, EDB_REC temp);
                 app_dev.session_details[i].status_freq = temp.status_freq;
-                QActive_post((QActive *)&app_dev, EVENT_APP_SEND_BROADCAST, i + 1);
+                app_dev.user_gprs_updates |= _BV(i);
             }
         }
+    }
+    if (app_dev.user_gprs_updates & 0x0F)
+    {
+        QActive_post((QActive *)&app_dev, EVENT_APP_SEND_BROADCAST, 0);
     }
 }
 
@@ -448,7 +459,7 @@ static QState init(App *const me)
             me->mssg_buf[1] = (((uint16_t)&Menu_Strings >> 8) & 0xFF);
             /* TODO: setup proper conditions to enter gprs setup */
             strcpy_P((char *)me->mssg_buf, PSTR("\"airtelgprs.com\",\"guest\",\"guest\""));
-            if (1)
+            if (0)
             {
                 QActive_post((QActive *)&gsm_dev, EVENT_GSM_GPRS_SETUP, 0);
                 return Q_HANDLED();
@@ -465,7 +476,7 @@ static QState init(App *const me)
         }
         case EVENT_GSM_GPRS_SETUP_DONE:
         {
-           // QActive_post((QActive *)&gsm_dev, EVENT_GSM_GPRS_START, 0);
+            // QActive_post((QActive *)&gsm_dev, EVENT_GSM_GPRS_START, 0);
             return Q_TRAN(&app_idle);
         }
 
@@ -475,7 +486,6 @@ static QState init(App *const me)
 
 static QState app_idle(App *const me)
 {
-    user temp;
 #if 0
     Softserial_print("state:idle");
     print_eventid(Q_SIG(me));
@@ -504,22 +514,34 @@ static QState app_idle(App *const me)
         }
         case Q_TIMEOUT_SIG:
         {
+            /* Ignore timeouts if the system is already sending some data */
             Softserial_println("timeout");
             QActive_arm((QActive *)me, 30 sec);
-            //update_session_timings();
-            //status_freq_updates();
-            return Q_TRAN(&update_server);
-            //return Q_HANDLED();
+            update_session_timings();
+            if (me->user_gprs_updates)
+            {
+                Softserial_println("timeout ignored");
+            }
+            else
+            {
+                status_freq_updates();
+            }
+            // return Q_TRAN(&update_server);
+            return Q_HANDLED();
         }
         case EVENT_APP_SEND_BROADCAST:
         {
             Softserial_print("Broadcast-");
-            Softserial_print_byte(Q_PAR(me));
             Softserial_println("");
-            edb_open(EEPROM_USER_HEAD);
-            edb_readrec((uint8_t)Q_PAR(me), EDB_REC temp);
-            strcpy((char *)app_dev.current_phone_no, (char *)temp.phone_no);
-            return Q_TRAN(&action_status);
+            return Q_TRAN(&send_broadcast);
+        }
+        case EVENT_APP_STATUS_READ:
+        {
+            return Q_TRAN(&get_status);
+        }
+        case EVENT_APP_STATUS_READ_DONE:
+        {
+            return Q_TRAN(me->history);
         }
         case Q_EXIT_SIG:
         {
@@ -661,7 +683,6 @@ static QState reciever(App *const me)
 
 static QState validate(App *const me)
 {
-    uint8_t index;
 #if 0
     Softserial_print("state:validate");
     print_eventid(Q_SIG(me));
@@ -675,9 +696,7 @@ static QState validate(App *const me)
         case Q_INIT_SIG:
         {
             /* Validate the phoneno, password */
-            index = 0;
-            index = validate_user();
-            if (!index)
+            if (!validate_user())
             {
                 Softserial_println("here");
                 //return Q_TRAN(&app_idle);
@@ -685,7 +704,7 @@ static QState validate(App *const me)
             else
             {
                 Softserial_println("here 1");
-                return Q_TRAN(&action_menu);
+                //return Q_TRAN(&action_menu);
                 convert_uppercase((char *)me->mssg_buf);
                 Softserial_println((char *)me->mssg_buf);
                 if (strstr((char *)me->mssg_buf, "STATUS") != NULL)
@@ -723,81 +742,27 @@ static QState validate(App *const me)
 
 static QState action_status(App *const me)
 {
-    /******************************************************
-    * Check the voltage of the lines and current .
-    * Decide whether the motor is on or off based on the current flow
-    * If CT is absent, use the Motor_On variable to do the same.
-    * Send status report :  Format as follows
-    * DD/MM/YYYY HH:MM:SS AM/PM ON/OFF RY YB BR I
-    ******************************************************/
-    Softserial_print("state:ac_status");
+    Softserial_print("s:ac_st");
     print_eventid(Q_SIG(me));
-    user temp;
-    uint8_t adc_pin;
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
         {
-            me->i_generic = 0;
-            QActive_post((QActive *)&gsm_dev, EVENT_GSM_CLOCK_READ, 0);
+            me->history = Q_STATE_CAST(&action_status);
             return Q_HANDLED();
         }
-        case EVENT_GSM_CLOCK_READ_DONE:
+        case Q_INIT_SIG:
         {
-            strcpy((char *)me->mssg_buf, (char *)me->buffer);
-            QActive_post((QActive *)&emon_dev, EVENT_EMON_READ_ENTITY, VRED);
-            return Q_HANDLED();
+            return Q_TRAN(&get_status);
         }
-        case EVENT_EMON_MEASUREMENT_DONE:
+        case EVENT_APP_STATUS_READ_DONE:
         {
-            if (!me->i_generic)
-            {
-                adc_pin = VYELLOW;
-            }
-            else if (me->i_generic == 1)
-            {
-                adc_pin = VBLUE;
-            }
-            else if (!me->i_generic == 2)
-            {
-                adc_pin = IRMS;
-            }
-            else
-            {
-                vi_string(me->mssg_buf);
-                Softserial_println((char *)me->mssg_buf);
-                QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_SEND, 0);
-                return Q_HANDLED();
-            }
-            me->VIrms[me->i_generic] = (uint16_t)Q_PAR(me);
-            me->i_generic++;
-            QActive_post((QActive *)&emon_dev, EVENT_EMON_READ_ENTITY, adc_pin);
-            return Q_HANDLED();
+            QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_SEND, 0);
         }
         case EVENT_GSM_SMS_SENT:
         {
             /* Recall the defered event */
-            if (me->defered_event)
-            {
-                me->defered_event = me->defered_event >> 4;
-                edb_open(EEPROM_USER_HEAD);
-                edb_readrec((uint8_t)(me->defered_event & 0x0F), EDB_REC temp);
-                me->defered_event = (uint8_t)me->defered_event & 0xF0;
-                strcpy((char *)app_dev.current_phone_no, (char *)temp.phone_no);
-                QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_SEND, 0);
-                return Q_HANDLED();
-            }
             return Q_TRAN(&app_idle);
-        }
-        case EVENT_APP_SEND_BROADCAST:
-        {
-            /* Defer the event to process it later */
-            me->defered_event = (me->defered_event | (uint8_t)Q_PAR(me));
-            if (me->defered_event)
-            {
-                me->defered_event = me->defered_event << 4;
-            }
-            return Q_HANDLED();
         }
         case Q_EXIT_SIG:
         {
@@ -907,6 +872,114 @@ static QState action_off(App *const me)
         }
     }
     return Q_SUPER(&validate);
+}
+
+static QState get_status(App *const me)
+{
+    /******************************************************
+    * Check the voltage of the lines and current .
+    * Decide whether the motor is on or off based on the current flow
+    * If CT is absent, use the Motor_On variable to do the same.
+    * Send status report :  Format as follows
+    * DD/MM/YYYY HH:MM:SS AM/PM ON/OFF RY YB BR I
+    ******************************************************/
+    uint8_t adc_pin;
+    switch (Q_SIG(me))
+    {
+        case Q_ENTRY_SIG:
+        {
+            me->i_generic = 0;
+            QActive_post((QActive *)&gsm_dev, EVENT_GSM_CLOCK_READ, 0);
+            return Q_HANDLED();
+        }
+        case EVENT_GSM_CLOCK_READ_DONE:
+        {
+            strcpy((char *)me->mssg_buf, (char *)me->buffer);
+            strcat((char*)me->mssg_buf, "\n");
+            QActive_post((QActive *)&emon_dev, EVENT_EMON_READ_ENTITY, VRED);
+            return Q_HANDLED();
+        }
+        case EVENT_EMON_MEASUREMENT_DONE:
+        {
+            if (!me->i_generic)
+            {
+                adc_pin = VYELLOW;
+            }
+            else if (me->i_generic == 1)
+            {
+                adc_pin = VBLUE;
+            }
+            else if (!me->i_generic == 2)
+            {
+                adc_pin = IRMS;
+            }
+            else
+            {
+                vi_string(me->mssg_buf);
+                Softserial_println((char *)me->mssg_buf);
+                QActive_post((QActive *)me, EVENT_APP_STATUS_READ_DONE, 0);
+                return Q_HANDLED();
+            }
+            me->VIrms[me->i_generic] = (uint16_t)Q_PAR(me);
+            me->i_generic++;
+            QActive_post((QActive *)&emon_dev, EVENT_EMON_READ_ENTITY, adc_pin);
+            return Q_HANDLED();
+        }
+        case Q_EXIT_SIG:
+        {
+            return Q_HANDLED();
+        }
+    }
+    return Q_SUPER(me->history);
+}
+
+static QState send_broadcast(App *const me)
+{
+    Softserial_print("s:se br");
+    print_eventid(Q_SIG(me));
+    uint8_t i;
+    user temp;
+    switch (Q_SIG(me))
+    {
+        case Q_ENTRY_SIG:
+        {
+            me->history = Q_STATE_CAST(&send_broadcast);
+            return Q_HANDLED();
+        }
+        case Q_INIT_SIG:
+        {
+            return Q_TRAN(&get_status);
+        }
+        case EVENT_APP_STATUS_READ_DONE:
+        {
+            QActive_post((QActive *)me, EVENT_GSM_SMS_SENT, 0);
+        }
+        case EVENT_GSM_SMS_SENT:
+        {
+            if (me->user_gprs_updates)
+            {
+                for (i = 0; i < me->system_settings.no_users; i++)
+                {
+                    if (me->user_gprs_updates & _BV(i))
+                    {
+                        edb_open(EEPROM_USER_HEAD);
+                        edb_readrec(i + 1, EDB_REC temp);
+                        me->user_gprs_updates &= ~(_BV(i));
+                        strcpy((char *)app_dev.current_phone_no, (char *)temp.phone_no);
+                        QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_SEND, 0);
+                        break;
+                    }
+                }
+                return Q_HANDLED();
+            }
+            return Q_TRAN(&app_idle);
+        }
+        case Q_EXIT_SIG:
+        {
+            return Q_HANDLED();
+        }
+    }
+    return Q_SUPER(&app_idle);
 }
 
 static void menu_settings_display()
