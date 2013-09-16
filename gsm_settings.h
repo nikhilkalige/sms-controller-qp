@@ -44,7 +44,7 @@ enum gsm_operations
 
 
 PROGMEM const char READY [] = "Call Ready";
-PROGMEM const char ATE_0[] = "ATE0";
+PROGMEM const char ATE_0[] = "ATE0\r\n";
 PROGMEM const char AT_IPR_115200[] = "AT+IPR=115200";
 PROGMEM const char AT_IPR_19200[] = "AT+IPR=19200";
 
@@ -55,7 +55,7 @@ PROGMEM const char _CREG2[]  = "+CREG: 0,2";
 PROGMEM const char _CREG3[]  = "+CREG: 0,3";
 PROGMEM const char _CREG5[]  = "+CREG: 0,5";
 
-PROGMEM const char CNMI[] = "AT+CNMI=2,1";
+PROGMEM const char CNMI[] = "AT+CNMI=2,1\r\n";
 PROGMEM const char CMGS[] = "AT+CMGS=\"";
 PROGMEM const char _CMGS[] = "+CMGS";
 PROGMEM const char _CMGS1[]  = "+CMGS:";
@@ -63,8 +63,8 @@ PROGMEM const char _CMGR_UN[]  = "+CMGR: \"REC UNREAD\"";
 PROGMEM const char _CMGR_READ[]  = "+CMGR: \"REC READ\"";
 PROGMEM const char _CMGR1[]  = "+CMGR:";
 PROGMEM const char _CMGL1[]  = "+CMGL:";
-PROGMEM const char CMGF[] = "AT+CMGF=1";
-PROGMEM const char CPMS[] = "AT+CPMS=\"SM\",\"SM\",\"SM\"";
+PROGMEM const char CMGF[] = "AT+CMGF=1\r\n";
+PROGMEM const char CPMS[] = "AT+CPMS=\"SM\",\"SM\",\"SM\"\r\n";
 PROGMEM const char _CPMS[] = "+CPMS";
 PROGMEM const char CPMS_REQ[] = "AT+CPMS?";
 PROGMEM const char CMGL_UNREAD[] = "AT+CMGL=\"REC UNREAD\"\r\n";
@@ -277,12 +277,12 @@ struct at_response_code network_table[] =
 
 const uint8_t *module_init_table[] =
 {
-    (uint8_t *)"ATE0\r\n",
+    (uint8_t *)ATE_0,
     /* SMS Related */
-    (uint8_t *)"AT+CNMI=2,1\r\n",
-    (uint8_t *)"AT+CMGF=1\r\n",
-    (uint8_t *)"AT+CPMS=\"SM\",\"SM\",\"SM\"\r\n",
-    (uint8_t *)"AT+CMGDA=\"DEL ALL\"\r\n",
+    (uint8_t *) CNMI,
+    (uint8_t *) CMGF,
+    (uint8_t *) CPMS,
+    (uint8_t *) CMGDA,
     (uint8_t *)""
 };
 

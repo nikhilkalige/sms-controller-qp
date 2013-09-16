@@ -17,8 +17,8 @@
 #define RX_NOT_STARTED      0
 #define RX_ALREADY_STARTED  1
 
-#define DEBUG_1        0
-#define DEBUG_2        0
+#define DEBUG_1        1
+#define DEBUG_2        1
 //uint8_t com_buff[COM_BUFFER_LENGTH];
 
 
@@ -279,8 +279,8 @@ static uint8_t parse_command(uint8_t *p_data, struct at_response_code *table, ui
     uint8_t j;
     do
     {
-        j = strlen((char *)(table[i].p_string));
-        if ((memcmp(table[i].p_string, p_data, j)) == 0)
+        j = strlen_P((char *)(table[i].p_string));
+        if ((memcmp_P(p_data, table[i].p_string, j)) == 0)
         {
             *message_id = table[i].message_id;
             return table[i].event_id;
@@ -780,7 +780,7 @@ static QState inactive_device_config(Gsm *const me)
         case Q_ENTRY_SIG:
         {
             gsm_dev.control.ix = 0;
-            send_command((uint8_t *)module_init_table[gsm_dev.control.ix], 0);
+            send_command((uint8_t *)module_init_table[gsm_dev.control.ix], 1);
             return Q_HANDLED();
         }
         case Q_INIT_SIG:
@@ -798,7 +798,7 @@ static QState inactive_device_config(Gsm *const me)
             }
             else
             {
-                send_command((uint8_t *)module_init_table[gsm_dev.control.ix], 0);
+                send_command((uint8_t *)module_init_table[gsm_dev.control.ix], 1);
                 return Q_HANDLED();
             }
         }
