@@ -27,6 +27,8 @@
 
 #define DEFAULT_STATUS_FREQ     5
 
+#define UPDATE_PERIOD       45 sec
+
 /******************************************************************
 *       All defnitions regarding the EEPROM are defined here
 *       EEPROM size is 1024 bytes for ATMEGA328p

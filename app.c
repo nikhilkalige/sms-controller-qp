@@ -497,7 +497,12 @@ static QState app_idle(App *const me)
     {
         case Q_ENTRY_SIG:
         {
-            QActive_arm((QActive *)me, 5 sec);
+            QActive_arm((QActive *)me, UPDATE_PERIOD);
+            if (me->defered_event)
+            {
+                me->defered_event--;
+                QActive_post((QActive *)me, EVENT_GSM_SMS_NEW_RECIEVED, 0);
+            }
             return Q_HANDLED();
         }
         case EVENT_GSM_SMS_NEW_RECIEVED:
@@ -519,7 +524,7 @@ static QState app_idle(App *const me)
         {
             /* Ignore timeouts if the system is already sending some data */
             Softserial_println("timeout");
-            QActive_arm((QActive *)me, 30 sec);
+            QActive_arm((QActive *)me, UPDATE_PERIOD);
             update_session_timings();
             if (me->user_gprs_updates)
             {
@@ -556,6 +561,8 @@ static QState app_idle(App *const me)
 
 static QState app_active(App *const me)
 {
+    Softserial_print("s:app act");
+    print_eventid(Q_SIG(me));
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
@@ -565,6 +572,23 @@ static QState app_active(App *const me)
         case Q_INIT_SIG:
         {
             return Q_HANDLED();
+            //return Q_TRAN(&app_idle);
+        }
+        case EVENT_GSM_SMS_NEW_RECIEVED:
+        {
+            /* Defer event to process later */
+            me->defered_event++;
+            return Q_HANDLED();
+        }
+        case Q_TIMEOUT_SIG:
+        {
+            QActive_arm((QActive *)me, UPDATE_PERIOD);
+            update_session_timings();
+            return Q_HANDLED();
+        }
+        case EVENT_APP_TRANSITION_OUT:
+        {
+            return Q_TRAN(&cleanup);
         }
         case Q_EXIT_SIG:
         {
@@ -701,7 +725,7 @@ static QState reciever(App *const me)
             return Q_HANDLED();
         }
     }
-    return Q_SUPER(&app_idle);
+    return Q_SUPER(&app_active);
 }
 
 static QState validate(App *const me)
@@ -748,19 +772,16 @@ static QState validate(App *const me)
                 {
                     return Q_TRAN(&action_menu);
                 }
-                else
-                {
-                    //return Q_TRAN( &app_idle);
-                }
-                return Q_HANDLED();
             }
+            QActive_post((QActive *)me, EVENT_APP_TRANSITION_OUT, 0);
+            return Q_HANDLED();
         }
         case Q_EXIT_SIG:
         {
             return Q_HANDLED();
         }
     }
-    return Q_SUPER(&app_idle);
+    return Q_SUPER(&app_active);
 }
 
 static QState action_status(App *const me)
@@ -976,6 +997,7 @@ static QState send_broadcast(App *const me)
         case EVENT_APP_STATUS_READ_DONE:
         {
             QActive_post((QActive *)me, EVENT_GSM_SMS_SENT, 0);
+            return Q_HANDLED();
         }
         case EVENT_GSM_SMS_SENT:
         {
@@ -1002,7 +1024,7 @@ static QState send_broadcast(App *const me)
             return Q_HANDLED();
         }
     }
-    return Q_SUPER(&app_idle);
+    return Q_SUPER(&app_active);
 }
 
 static void menu_settings_display()
@@ -1626,6 +1648,8 @@ static QState generic_menu_handler(App *const me)
 
 static QState cleanup(App *const me)
 {
+    Softserial_print("s:cleanup");
+    print_eventid(Q_SIG(me));
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
@@ -1642,7 +1666,7 @@ static QState cleanup(App *const me)
             return Q_HANDLED();
         }
     }
-    return Q_SUPER(&app_idle);
+    return Q_SUPER(&app_active);
 }
 
 #if 0

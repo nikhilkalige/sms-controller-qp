@@ -155,6 +155,7 @@ enum system_events
     GSM_FAILURE_EVENT,
     EVENT_APP_STATUS_READ_DONE,
     EVENT_APP_STATUS_READ,
+    EVENT_APP_TRANSITION_OUT,
     MAX_PUB_SIG,            // the last published signal
 };
 #endif
