@@ -56,6 +56,9 @@ static QState generic_menu_handler(App *const me);
 static QState update_server(App *const me);
 static QState send_broadcast(App *const me);
 
+static QState cleanup(App *const me);
+
+
 //extern gsm_driver_messages SMS_UNREAD;
 
 /************************************************************************************************************************************
@@ -551,6 +554,26 @@ static QState app_idle(App *const me)
     return Q_SUPER(&QHsm_top);
 }
 
+static QState app_active(App *const me)
+{
+    switch (Q_SIG(me))
+    {
+        case Q_ENTRY_SIG:
+        {
+            return Q_HANDLED();
+        }
+        case Q_INIT_SIG:
+        {
+            return Q_HANDLED();
+        }
+        case Q_EXIT_SIG:
+        {
+            return Q_HANDLED();
+        }
+    }
+    return Q_SUPER(&QHsm_top);
+}
+
 static QState update_server(App *const me)
 {
 #if 1
@@ -671,7 +694,7 @@ static QState reciever(App *const me)
         }
         case EVENT_GSM_SMS_NOT_FOUND:
         {
-            return Q_TRAN(&app_idle);
+            return Q_TRAN(&cleanup);
         }
         case Q_EXIT_SIG:
         {
@@ -699,7 +722,7 @@ static QState validate(App *const me)
             if (!validate_user())
             {
                 Softserial_println("here");
-                //return Q_TRAN(&app_idle);
+                //return Q_TRAN(&cleanup);
             }
             else
             {
@@ -762,7 +785,7 @@ static QState action_status(App *const me)
         case EVENT_GSM_SMS_SENT:
         {
             /* Recall the defered event */
-            return Q_TRAN(&app_idle);
+            return Q_TRAN(&cleanup);
         }
         case Q_EXIT_SIG:
         {
@@ -812,7 +835,7 @@ static QState action_on(App *const me)
         }
         case EVENT_GSM_SMS_SENT:
         {
-            return Q_TRAN(&app_idle);
+            return Q_TRAN(&cleanup);
         }
         case Q_EXIT_SIG:
         {
@@ -863,7 +886,7 @@ static QState action_off(App *const me)
         }
         case EVENT_GSM_SMS_SENT:
         {
-            return Q_TRAN(&app_idle);
+            return Q_TRAN(&cleanup);
         }
         case Q_EXIT_SIG:
         {
@@ -895,7 +918,7 @@ static QState get_status(App *const me)
         case EVENT_GSM_CLOCK_READ_DONE:
         {
             strcpy((char *)me->mssg_buf, (char *)me->buffer);
-            strcat((char*)me->mssg_buf, "\n");
+            strcat((char *)me->mssg_buf, "\n");
             QActive_post((QActive *)&emon_dev, EVENT_EMON_READ_ENTITY, VRED);
             return Q_HANDLED();
         }
@@ -972,7 +995,7 @@ static QState send_broadcast(App *const me)
                 }
                 return Q_HANDLED();
             }
-            return Q_TRAN(&app_idle);
+            return Q_TRAN(&cleanup);
         }
         case Q_EXIT_SIG:
         {
@@ -1054,7 +1077,7 @@ static QState action_menu(App *const me)
         }
         case EVENT_GSM_SMS_SENT:
         {
-            return Q_TRAN(&app_idle);
+            return Q_TRAN(&cleanup);
         }
         case Q_EXIT_SIG:
         {
@@ -1555,7 +1578,7 @@ static QState set_time(App *const me)
         case EVENT_GSM_PARSING_ERROR:
         {
             strcpy_P((char *)app_dev.mssg_buf, PSTR("ERROR"));
-            return Q_TRAN(&app_idle);
+            return Q_TRAN(&cleanup);
         }
         case Q_EXIT_SIG:
         {
@@ -1599,6 +1622,27 @@ static QState generic_menu_handler(App *const me)
         }
     }
     return Q_SUPER(&menu_parse);
+}
+
+static QState cleanup(App *const me)
+{
+    switch (Q_SIG(me))
+    {
+        case Q_ENTRY_SIG:
+        {
+            QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_DELETE, 1);
+            return Q_HANDLED();
+        }
+        case EVENT_GSM_SMS_DELETE_DONE:
+        {
+            return Q_TRAN(&app_idle);
+        }
+        case Q_EXIT_SIG:
+        {
+            return Q_HANDLED();
+        }
+    }
+    return Q_SUPER(&app_idle);
 }
 
 #if 0

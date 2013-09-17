@@ -487,7 +487,9 @@ static void sms_delete_command(uint8_t *pos)
 {
     send_command((uint8_t *)CMGD, 1);
     send_command(pos, 0);
-    send_command_timeout((uint8_t *)"\r\n", 1000, 0);
+    send_command_timeout((uint8_t *)",3", 0, 0);
+    /* Added to delete all read messages */
+    send_command_timeout((uint8_t *)Newline, 1000, 1);
 }
 
 static void sms_delete_all_command()
@@ -512,15 +514,18 @@ static void check_sms_presence_command(uint8_t status)
     switch (status)
     {
         case SMS_UNREAD:
-            send_command((uint8_t *)CMGL_UNREAD, 1);
+            send_command_timeout((uint8_t *)CMGL_UNREAD, 0, 1);
             break;
         case SMS_ALL:
-            send_command((uint8_t *)CMGL_ALL, 1);
+            send_command_timeout((uint8_t *)CMGL_ALL, 0, 1);
             break;
         case SMS_READ:
-            send_command((uint8_t *)CMGL_READ, 1);
+            send_command_timeout((uint8_t *)CMGL_READ, 0, 1);
             break;
     }
+    /* Added to prevent changing of message status */
+    send_command_timeout((uint8_t *)",1", 0, 0);
+    send_command((uint8_t *) Newline, 1);
 }
 
 static void read_sms_command(uint8_t *position)

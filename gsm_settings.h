@@ -67,9 +67,9 @@ PROGMEM const char CMGF[] = "AT+CMGF=1\r\n";
 PROGMEM const char CPMS[] = "AT+CPMS=\"SM\",\"SM\",\"SM\"\r\n";
 PROGMEM const char _CPMS[] = "+CPMS";
 PROGMEM const char CPMS_REQ[] = "AT+CPMS?";
-PROGMEM const char CMGL_UNREAD[] = "AT+CMGL=\"REC UNREAD\"\r\n";
-PROGMEM const char CMGL_READ[] = "AT+CMGL=\"REC READ\"\r\n";
-PROGMEM const char CMGL_ALL[] = "AT+CMGL=\"ALL\"\r\n";
+PROGMEM const char CMGL_UNREAD[] = "AT+CMGL=\"REC UNREAD\"";
+PROGMEM const char CMGL_READ[] = "AT+CMGL=\"REC READ\"";
+PROGMEM const char CMGL_ALL[] = "AT+CMGL=\"ALL\"";
 PROGMEM const char _CMGL[] = "+CMGL:";
 PROGMEM const char CMGR[] = "AT+CMGR=";
 PROGMEM const char _CMGR[] = "+CMGR";
@@ -116,6 +116,7 @@ PROGMEM const char _CMS[]  = "+CMS ERROR:";
 PROGMEM const char _CME[]  = "+CME ERROR:";
 PROGMEM const char _PR[]  = "> ";
 
+PROGMEM const char Newline[] = "\r\n";
 
 
 
