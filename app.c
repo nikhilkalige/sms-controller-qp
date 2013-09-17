@@ -772,6 +772,10 @@ static QState validate(App *const me)
                 {
                     return Q_TRAN(&action_menu);
                 }
+                else if (me->session_expired & _BV((me->current_userid - 1)))
+                {
+                    return Q_TRAN(&action_menu);
+                }
             }
             QActive_post((QActive *)me, EVENT_APP_TRANSITION_OUT, 0);
             return Q_HANDLED();
@@ -802,6 +806,7 @@ static QState action_status(App *const me)
         case EVENT_APP_STATUS_READ_DONE:
         {
             QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_SEND, 0);
+            return Q_HANDLED();
         }
         case EVENT_GSM_SMS_SENT:
         {
@@ -1052,7 +1057,6 @@ static void menu_settings_display()
     }
 }
 
-/* TODO: make changes in the super state to handle sessions */
 static QState action_menu(App *const me)
 {
 #if 1
@@ -1067,7 +1071,7 @@ static QState action_menu(App *const me)
         }
         case Q_INIT_SIG:
         {
-            update_session_expired(1);
+            //update_session_expired(1);
             /* Check for ongoing session */
             if (!(me->session_expired & _BV((me->current_userid - 1))))
             {
@@ -1076,7 +1080,6 @@ static QState action_menu(App *const me)
             else
             {
                 /* Menu has already been entered, so parse the command */
-                //me->current_userid = 1;
                 Softserial_println("Old Session");
                 menu_settings_display();
                 return Q_TRAN(&menu_parse);
