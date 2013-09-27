@@ -16,7 +16,7 @@
 #include "settings.h"
 #include "softserial.h"
 
-#define EMON_SERIAL_DEBUG       0
+//#define EMON_SERIAL_DEBUG 1
 
 typedef struct emon_temp_tag
 {
@@ -55,6 +55,7 @@ void emon_ctor(void)
 void emon_config(QActive *master)
 {
     emon_dev.master = master;
+    emon_dev.VCAL = 4.8;
     adc_init((QActive *)&emon_dev);
 }
 
@@ -134,6 +135,10 @@ static QState read_entity(emon *const me)
             Softserial_print_byte(emon_vars.sampleV);
             Softserial_println("");
 #endif
+#if 0
+            Softserial_print("  ");
+            Softserial_print_byte(emon_vars.sampleV);
+#endif
             /* Apply digital high pass filters to remove 2.5V DC offset (centered on 0V) */
             emon_vars.filteredV = 0.996 * (emon_vars.lastFilteredV + (emon_vars.sampleV - emon_vars.lastSampleV));
             /* Root-mean-square method voltage */
@@ -162,9 +167,22 @@ static QState read_entity(emon *const me)
             adc_read(emon_vars.pin);
             if (emon_vars.crossCount >= EMON_CROSSINGS)
             {
+                char a[17];
                 double V_RATIO = me->VCAL * ((emon_vars.vcc / 1000.0) / 1023.0);
                 me->Vrms = V_RATIO * sqrt(emon_vars.sumV / emon_vars.numberOfSamples);
 #ifdef EMON_SERIAL_DEBUG
+                Softserial_println("");
+                Softserial_print_byte(emon_vars.vcc);
+                Softserial_println("");
+                dtostrf(V_RATIO, 10, 5, a);
+                Softserial_println(a);
+                Softserial_print_byte(emon_vars.numberOfSamples);
+                Softserial_println("");
+                Softserial_print("sum= ");
+                Softserial_print_byte(emon_vars.sumV);
+                Softserial_println("");
+                dtostrf(me->Vrms, 10, 5, a);
+                Softserial_println(a);
                 Softserial_print("Vrms = ");
                 Softserial_print_byte(me->Vrms);
                 Softserial_println("");
@@ -243,8 +261,8 @@ static QState read_vcc(emon *const me)
             temp = (uint16_t)Q_PAR(me);
             emon_vars.vcc = 1126400L / temp;
 #ifdef EMON_SERIAL_DEBUG
-            Softserial_print_byte(temp);
-            Softserial_println("");
+            //Softserial_print_byte(temp);
+            // Softserial_println("");
             Softserial_print("VCC = ");
             Softserial_print_byte(emon_vars.vcc);
             Softserial_println("");

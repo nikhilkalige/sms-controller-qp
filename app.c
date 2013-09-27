@@ -20,10 +20,10 @@
 #define SOFT_DEBUG  1
 #define DEBUG       1
 
-#define VRED        1
-#define VYELLOW     1
-#define VBLUE       1
-#define IRMS        1
+#define VRED_PIN        2
+#define VYELLOW_PIN     1
+#define VBLUE_PIN       0
+#define IRMS_PIN        6
 
 #define PORT_MOTOR_ON   PORTD
 #define PORT_MOTOR_OFF  PORTD
@@ -945,25 +945,26 @@ static QState get_status(App *const me)
         {
             strcpy((char *)me->mssg_buf, (char *)me->buffer);
             strcat((char *)me->mssg_buf, "\n");
-            QActive_post((QActive *)&emon_dev, EVENT_EMON_READ_ENTITY, VRED);
+            QActive_post((QActive *)&emon_dev, EVENT_EMON_READ_ENTITY, VRED_PIN);
             return Q_HANDLED();
         }
         case EVENT_EMON_MEASUREMENT_DONE:
         {
             if (!me->i_generic)
             {
-                adc_pin = VYELLOW;
+                adc_pin = VYELLOW_PIN;
             }
             else if (me->i_generic == 1)
             {
-                adc_pin = VBLUE;
+                adc_pin = VBLUE_PIN;
             }
-            else if (!me->i_generic == 2)
+            else if (me->i_generic == 2)
             {
-                adc_pin = IRMS;
+                adc_pin = IRMS_PIN;
             }
             else
             {
+                me->VIrms[me->i_generic] = (uint16_t)Q_PAR(me);
                 vi_string(me->mssg_buf);
                 Softserial_println((char *)me->mssg_buf);
                 QActive_post((QActive *)me, EVENT_APP_STATUS_READ_DONE, 0);
@@ -984,8 +985,10 @@ static QState get_status(App *const me)
 
 static QState send_broadcast(App *const me)
 {
+#if 0
     Softserial_print("s:se br");
     print_eventid(Q_SIG(me));
+#endif
     uint8_t i;
     user temp;
     switch (Q_SIG(me))
@@ -1689,7 +1692,7 @@ static QState measure_vi(App *const me)
         case Q_ENTRY_SIG:
         {
             me->i_generic = 0;
-            QActive_post((QActive *)&emon_dev, EVENT_EMON_READ_ENTITY, VRED);
+            QActive_post((QActive *)&emon_dev, EVENT_EMON_READ_ENTITY, VRED_PIN);
             return Q_HANDLED();
         }
         case EVENT_EMON_MEASUREMENT_DONE:
@@ -1704,7 +1707,7 @@ static QState measure_vi(App *const me)
             }
             else if (!me->i_generic == 2)
             {
-                adc_pin = IRMS;
+                adc_pin = IRMS_PIN;
             }
             else
             {
