@@ -300,11 +300,11 @@ static void vi_string(unsigned char *string)
     uint8_t i;
     for (i = 0; i < 3; i++)
     {
-        dtostrf(app_dev.VIrms[i], 1, 1, (char *)vi);
+        dtostrf(app_dev.VIrms[i], 1, 2, (char *)vi);
         strcat((char *)string, (char *)vi);
         strcat_P((char *)string, PSTR("V "));
     }
-    dtostrf(app_dev.VIrms[i], 1, 1, (char *)vi);
+    dtostrf(app_dev.VIrms[i], 1, 2, (char *)vi);
     strcat((char *)string, (char *)vi);
     strcat_P((char *)string, PSTR("A"));
 }
@@ -933,6 +933,7 @@ static QState get_status(App *const me)
     * DD/MM/YYYY HH:MM:SS AM/PM ON/OFF RY YB BR I
     ******************************************************/
     uint8_t adc_pin;
+    double *ptr;
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
@@ -950,10 +951,10 @@ static QState get_status(App *const me)
         }
         case EVENT_EMON_MEASUREMENT_DONE:
         {
-            me->VIrms[me->i_generic] = (uint16_t)Q_PAR(me);
+            ptr = (double*)Q_PAR(me);
+            me->VIrms[me->i_generic] = *ptr;
             if (me->i_generic == 3)
             {
-                me->VIrms[me->i_generic] = (double)Q_PAR(me);
                 vi_string(me->mssg_buf);
                 Softserial_println((char *)me->mssg_buf);
                 QActive_post((QActive *)me, EVENT_APP_STATUS_READ_DONE, 0);

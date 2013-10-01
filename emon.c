@@ -57,6 +57,7 @@ void emon_config(QActive *master)
 {
     emon_dev.master = master;
     emon_dev.VCAL = 4.8;
+    emon_dev.ICAL = 4.8;
     adc_init((QActive *)&emon_dev);
 }
 
@@ -67,6 +68,24 @@ void convert_rms(double *calib)
 {
     double V_RATIO = *calib * ((emon_vars.vcc / 1000.0) / 1023.0);
     emon_dev.Vrms = V_RATIO * sqrt(emon_vars.sumV / emon_vars.numberOfSamples);
+#if 0
+    uint8_t a[13];
+    Softserial_println("");
+    Softserial_print_byte(emon_vars.vcc);
+    Softserial_println("");
+    dtostrf(V_RATIO, 10, 5, (char *)a);
+    Softserial_println((char *)a);
+    Softserial_print_byte(emon_vars.numberOfSamples);
+    Softserial_println("");
+    Softserial_print("sum= ");
+    Softserial_print_byte(emon_vars.sumV);
+    Softserial_println("");
+    dtostrf(emon_dev.Vrms, 10, 5, (char *)a);
+    Softserial_println((char *)a);
+    Softserial_print("Vrms = ");
+    Softserial_print_byte(emon_dev.Vrms);
+    Softserial_println("");
+#endif
 }
 /************************************************************************************************************************************
                                                     ***** State Machines *****
@@ -82,6 +101,7 @@ static QState idle(emon *const me)
     {
         case Q_ENTRY_SIG:
             return Q_HANDLED();
+
         case EVENT_EMON_READ_VOLTAGE:
             emon_vars.pin = (uint8_t)Q_PAR(me);
             me->current_activity = 1;
@@ -91,18 +111,6 @@ static QState idle(emon *const me)
             emon_vars.pin = (uint8_t)Q_PAR(me);
             me->current_activity = 2;
             return Q_TRAN(&read_entity);
-
-        case EVENT_EMON_START_CONVERSION:
-            if (me->current_activity == 1)
-            {
-                convert_rms(&me->VCAL);
-            }
-            else if (me->current_activity == 2)
-            {
-                convert_rms(&me->ICAL);
-            }
-            QActive_post((QActive*)me->master, EVENT_EMON_MEASUREMENT_DONE, me->Vrms);
-            return Q_HANDLED();
     }
     return Q_SUPER(&QHsm_top);
 }
@@ -156,7 +164,7 @@ static QState read_entity(emon *const me)
             Softserial_print_byte(emon_vars.sampleV);
             Softserial_println("");
 #endif
-#if 0
+#if 1
             Softserial_print("  ");
             Softserial_print_byte(emon_vars.sampleV);
 #endif
@@ -188,27 +196,15 @@ static QState read_entity(emon *const me)
             adc_read(emon_vars.pin);
             if (emon_vars.crossCount >= EMON_CROSSINGS)
             {
-                //char a[17];
-                double V_RATIO = me->VCAL * ((emon_vars.vcc / 1000.0) / 1023.0);
-                me->Vrms = V_RATIO * sqrt(emon_vars.sumV / emon_vars.numberOfSamples);
-#ifdef EMON_SERIAL_DEBUG
-                Softserial_println("");
-                Softserial_print_byte(emon_vars.vcc);
-                Softserial_println("");
-                dtostrf(V_RATIO, 10, 5, a);
-                Softserial_println(a);
-                Softserial_print_byte(emon_vars.numberOfSamples);
-                Softserial_println("");
-                Softserial_print("sum= ");
-                Softserial_print_byte(emon_vars.sumV);
-                Softserial_println("");
-                dtostrf(me->Vrms, 10, 5, a);
-                Softserial_println(a);
-                Softserial_print("Vrms = ");
-                Softserial_print_byte(me->Vrms);
-                Softserial_println("");
-#endif
-                QActive_post((QActive *)me, EVENT_EMON_START_CONVERSION, 0);
+                if (me->current_activity == 1)
+                {
+                    convert_rms(&me->VCAL);
+                }
+                else if (me->current_activity == 2)
+                {
+                    convert_rms(&me->ICAL);
+                }
+                QActive_post((QActive *)me->master, EVENT_EMON_MEASUREMENT_DONE, (uint16_t)&me->Vrms);
                 return Q_TRAN(&idle);
             }
             return Q_HANDLED();
