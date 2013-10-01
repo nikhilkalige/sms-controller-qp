@@ -21,6 +21,13 @@
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 
+/******************************************************************
+* Device Version and Device Number
+******************************************************************/
+#define DEVICE_VERSION  1
+#define DEVICE_NUMBER   1
+
+
 #define MAX_NO_USERS            4
 #define MAX_PASSWORD_LENGTH     4
 #define MAX_NO_LENGTH           14
@@ -41,7 +48,11 @@
 ******************************************************************/
 
 #define FIRST_BOOT_ADD 1023
-#define FIRST_BOOT_VALUE 0xAB
+#define FIRST_BOOT_VALUE 0xAA
+
+/* Allocate first 40 bytes for system use */
+#define DEVICE_VERSION_ADDRESS  0
+#define DEVICE_NUMBER_ADDRESS   1
 
 /*
     typedef struct user_tag
@@ -60,8 +71,8 @@
     Provide extra space for 2 more users
     98 + (22 * 2) = 142
 */
-#define USER_SIZE           142
-#define EEPROM_USER_HEAD    0
+#define USER_SIZE           182
+#define EEPROM_USER_HEAD    40
 
 /*
     typedef struct
@@ -79,8 +90,8 @@
     Add 10 bytes of extra space
     14 + 10 = 24
 */
-#define SETTINGS_SIZE           166  /* 142 + 24 = 166 */
-#define EEPROM_SETTINGS_HEAD    142
+#define SETTINGS_SIZE           206  /* 142 + 24 = 166 */
+#define EEPROM_SETTINGS_HEAD    182
 
 
 #if 0

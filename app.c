@@ -233,6 +233,9 @@ static void initialize_system()
 #ifdef SOFT_DEBUG
         Softserial_println("FIRST BOOT");
 #endif
+        eeprom_write_byte((uint8_t*)DEVICE_NUMBER_ADDRESS, DEVICE_NUMBER);
+        eeprom_write_byte((uint8_t*)DEVICE_VERSION_ADDRESS, DEVICE_VERSION);
+
         edb_create(EEPROM_USER_HEAD, USER_SIZE, (uint16_t)sizeof(user));
         edb_create(EEPROM_SETTINGS_HEAD, SETTINGS_SIZE, (uint16_t)sizeof(settings));
 
@@ -951,7 +954,7 @@ static QState get_status(App *const me)
         }
         case EVENT_EMON_MEASUREMENT_DONE:
         {
-            ptr = (double*)Q_PAR(me);
+            ptr = (double *)Q_PAR(me);
             me->VIrms[me->i_generic] = *ptr;
             if (me->i_generic == 3)
             {
@@ -1019,7 +1022,8 @@ static QState send_broadcast(App *const me)
         {
             if (me->user_gprs_updates)
             {
-                for (i = 0; i < me->system_settings.no_users; i++)
+                /* Skip the root user */
+                for (i = 1; i < me->system_settings.no_users; i++)
                 {
                     if (me->user_gprs_updates & _BV(i))
                     {
@@ -1662,8 +1666,10 @@ static QState generic_menu_handler(App *const me)
 
 static QState cleanup(App *const me)
 {
+#if 0
     Softserial_print("s:cleanup");
     print_eventid(Q_SIG(me));
+#endif
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
