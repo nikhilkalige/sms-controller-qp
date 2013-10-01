@@ -42,6 +42,7 @@ typedef struct emon_tag
     double VCAL;
     double ICAL;
     double PHASECAL;
+    uint8_t current_activity;
 
 } emon;
 emon emon_dev;
