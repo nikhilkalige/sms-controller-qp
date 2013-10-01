@@ -55,7 +55,7 @@ static QState set_time(App *const me);
 static QState generic_menu_handler(App *const me);
 static QState update_server(App *const me);
 static QState send_broadcast(App *const me);
-
+static QState update_motor(App *const me);
 static QState cleanup(App *const me);
 
 
@@ -233,8 +233,8 @@ static void initialize_system()
 #ifdef SOFT_DEBUG
         Softserial_println("FIRST BOOT");
 #endif
-        eeprom_write_byte((uint8_t*)DEVICE_NUMBER_ADDRESS, DEVICE_NUMBER);
-        eeprom_write_byte((uint8_t*)DEVICE_VERSION_ADDRESS, DEVICE_VERSION);
+        eeprom_write_byte((uint8_t *)DEVICE_NUMBER_ADDRESS, DEVICE_NUMBER);
+        eeprom_write_byte((uint8_t *)DEVICE_VERSION_ADDRESS, DEVICE_VERSION);
 
         edb_create(EEPROM_USER_HEAD, USER_SIZE, (uint16_t)sizeof(user));
         edb_create(EEPROM_SETTINGS_HEAD, SETTINGS_SIZE, (uint16_t)sizeof(settings));
@@ -269,6 +269,9 @@ static void initialize_system()
         edb_readrec(tmp + 1, EDB_REC temp);
         app_dev.session_details[tmp].status_freq = temp.status_freq;
     }
+    /* Init other system variables */
+    app_dev.check_motor = 0;
+    app_dev.motor_on = 0;
 }
 
 static void perform_action(void)
@@ -395,7 +398,7 @@ static void status_freq_updates()
 {
     uint8_t i;
     user temp;
-    for (i = 0; i < app_dev.system_settings.no_users; i++)
+    for (i = 1; i < app_dev.system_settings.no_users; i++)
     {
         if (app_dev.session_details[i].status_freq)
         {
@@ -415,6 +418,27 @@ static void status_freq_updates()
     }
 }
 
+static uint8_t update_motor_variable()
+{
+    uint8_t i;
+    i = app_dev.motor_on;
+    if ((uint16_t)(app_dev.VIrms[3]) >= CURRENT_THRESHOLD)
+    {
+        app_dev.motor_on = 1;
+    }
+    else
+    {
+        app_dev.motor_on = 0;
+    }
+    if (i != app_dev.motor_on)
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+}
 /************************************************************************************************************************************
                                                     ***** State Machines *****
 ************************************************************************************************************************************/
@@ -518,33 +542,51 @@ static QState app_idle(App *const me)
             //QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_READ_REQUEST, 0x01);
             //return Q_HANDLED();
             return Q_TRAN(&reciever);
-#if 0
-            strcpy_P(me->current_phone_no, PSTR("+919731472140"));
-            return Q_TRAN(&action_menu);
-#endif
         }
         case Q_TIMEOUT_SIG:
         {
             /* Ignore timeouts if the system is already sending some data */
             Softserial_println("timeout");
             QActive_arm((QActive *)me, UPDATE_PERIOD);
-            update_session_timings();
+            if (me->check_motor)
+            {
+                Softserial_println("m high");
+                update_session_timings();
+                me->check_motor = 0;
+            }
+            else
+            {
+                Softserial_println("m low");
+                me->check_motor++;
+            }
+
             if (me->user_gprs_updates)
             {
                 Softserial_println("timeout ignored");
             }
-            else
+            else if(me->check_motor)
             {
+                Softserial_println("freq update");
                 status_freq_updates();
+            }
+            if (!(app_dev.user_gprs_updates & 0x0F))
+            {
+                Softserial_println("motor timeout");
+                QActive_post((QActive *)&app_dev, EVENT_APP_UPDATE_MOTOR, 0);
             }
             // return Q_TRAN(&update_server);
             return Q_HANDLED();
         }
         case EVENT_APP_SEND_BROADCAST:
         {
-            Softserial_print("Broadcast-");
-            Softserial_println("");
+#if 0
+            Softserial_println("Broadcast-");
+#endif
             return Q_TRAN(&send_broadcast);
+        }
+        case EVENT_APP_UPDATE_MOTOR:
+        {
+            return Q_TRAN(&update_motor);
         }
         case EVENT_APP_STATUS_READ:
         {
@@ -564,8 +606,10 @@ static QState app_idle(App *const me)
 
 static QState app_active(App *const me)
 {
+#if 1
     Softserial_print("s:app act");
     print_eventid(Q_SIG(me));
+#endif
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
@@ -586,7 +630,15 @@ static QState app_active(App *const me)
         case Q_TIMEOUT_SIG:
         {
             QActive_arm((QActive *)me, UPDATE_PERIOD);
-            update_session_timings();
+            if (me->check_motor)
+            {
+                update_session_timings();
+                me->check_motor = 0;
+            }
+            else
+            {
+                me->check_motor++;
+            }
             return Q_HANDLED();
         }
         case EVENT_APP_TRANSITION_OUT:
@@ -933,7 +985,7 @@ static QState get_status(App *const me)
     * Decide whether the motor is on or off based on the current flow
     * If CT is absent, use the Motor_On variable to do the same.
     * Send status report :  Format as follows
-    * DD/MM/YYYY HH:MM:SS AM/PM ON/OFF RY YB BR I
+    * DD/MM/YYYY HH:MM:SS AM/PM ON/OFF RY YB BR I MOTOR ON/OFF
     ******************************************************/
     uint8_t adc_pin;
     double *ptr;
@@ -959,6 +1011,15 @@ static QState get_status(App *const me)
             if (me->i_generic == 3)
             {
                 vi_string(me->mssg_buf);
+                strcat((char *)me->mssg_buf, "\nMotor ");
+                if (me->motor_on)
+                {
+                    strcat((char *)me->mssg_buf, "On");
+                }
+                else
+                {
+                    strcat((char *)me->mssg_buf, "Off");
+                }
                 Softserial_println((char *)me->mssg_buf);
                 QActive_post((QActive *)me, EVENT_APP_STATUS_READ_DONE, 0);
                 return Q_HANDLED();
@@ -996,7 +1057,7 @@ static QState get_status(App *const me)
 
 static QState send_broadcast(App *const me)
 {
-#if 0
+#if 1
     Softserial_print("s:se br");
     print_eventid(Q_SIG(me));
 #endif
@@ -1015,12 +1076,19 @@ static QState send_broadcast(App *const me)
         }
         case EVENT_APP_STATUS_READ_DONE:
         {
+            if (update_motor_variable())
+            {
+                for (i = 1; i < me->system_settings.no_users; i++)
+                {
+                    me->user_gprs_updates |= 1 << i;
+                }
+            }
             QActive_post((QActive *)me, EVENT_GSM_SMS_SENT, 0);
             return Q_HANDLED();
         }
         case EVENT_GSM_SMS_SENT:
         {
-            if (me->user_gprs_updates)
+            if (me->user_gprs_updates & 0x0F)
             {
                 /* Skip the root user */
                 for (i = 1; i < me->system_settings.no_users; i++)
@@ -1036,6 +1104,41 @@ static QState send_broadcast(App *const me)
                     }
                 }
                 return Q_HANDLED();
+            }
+            return Q_TRAN(&cleanup);
+        }
+        case Q_EXIT_SIG:
+        {
+            return Q_HANDLED();
+        }
+    }
+    return Q_SUPER(&app_active);
+}
+
+static QState update_motor(App *const me)
+{
+    Softserial_println("s:up motor");
+    double *ptr;
+    uint8_t i;
+    switch (Q_SIG(me))
+    {
+        case Q_ENTRY_SIG:
+        {
+            QActive_post((QActive *)&emon_dev, EVENT_EMON_READ_CURRENT, IRMS_PIN);
+            return Q_HANDLED();
+        }
+        case EVENT_EMON_MEASUREMENT_DONE:
+        {
+            ptr = (double *)Q_PAR(me);
+            me->VIrms[3] = *ptr;
+            if (update_motor_variable())
+            {
+                /* Update the users */
+                for (i = 1; i < me->system_settings.no_users; i++)
+                {
+                    me->user_gprs_updates |= 1 << i;
+                }
+                return Q_TRAN(&send_broadcast);
             }
             return Q_TRAN(&cleanup);
         }
@@ -1666,7 +1769,7 @@ static QState generic_menu_handler(App *const me)
 
 static QState cleanup(App *const me)
 {
-#if 0
+#if 1
     Softserial_print("s:cleanup");
     print_eventid(Q_SIG(me));
 #endif

@@ -1162,8 +1162,9 @@ static QState active_network_status(Gsm *const me)
 
 static QState active_sms_send(Gsm *const me)
 {
-#if 0
-    Softserial_print("s:sms send");
+#if 1
+    Softserial_print("s:sms send ");
+    Softserial_print_byte(me->control.response);
     print_eventid(Q_SIG(me));
 #endif
     switch (Q_SIG(me))
@@ -1202,6 +1203,10 @@ static QState active_sms_send(Gsm *const me)
                 {
                     Softserial_println_flash(me->control.mssg_buf[1] << 8 | me->control.mssg_buf[0]);
                     send_command_timeout((uint8_t *)(me->control.mssg_buf[1] << 8 | me->control.mssg_buf[0]), 0, 1);
+                    *me->control.master_buffer = 0x1A;
+                    *(me->control.master_buffer + 1) = 0;
+                    send_command_timeout(me->control.master_buffer, 5 sec, 0);
+                    //return Q_TRAN(&active_sms_send_support);
                 }
                 else
                 {

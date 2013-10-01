@@ -164,7 +164,7 @@ static QState read_entity(emon *const me)
             Softserial_print_byte(emon_vars.sampleV);
             Softserial_println("");
 #endif
-#if 1
+#if 0
             Softserial_print("  ");
             Softserial_print_byte(emon_vars.sampleV);
 #endif

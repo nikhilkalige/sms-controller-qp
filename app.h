@@ -77,6 +77,7 @@ typedef struct App_tag
     uint8_t current_userid;
     uint8_t session_expired;
     user_session session_details[4];
+    uint8_t check_motor;
     QStateHandler history;
 } App;
 

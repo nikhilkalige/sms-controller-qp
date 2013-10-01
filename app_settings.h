@@ -36,6 +36,8 @@
 
 #define UPDATE_PERIOD       45 sec
 
+#define CURRENT_THRESHOLD       2
+
 /******************************************************************
 *       All defnitions regarding the EEPROM are defined here
 *       EEPROM size is 1024 bytes for ATMEGA328p
@@ -130,8 +132,10 @@ const char * Menu_Strings[] PROGMEM = { Op_1,Op_2,Op_3,Op_4,Op_5,Op_6,Op_7,Op_8,
 
 const char Invalid[] PROGMEM = "Invalid";
 
+const char Menu_Strings[] PROGMEM = "1.Change PASS\n2.Add NO\n3.Del NO\n4.En PASS\n5.En Broadcast\n6.Status Freq\n7.Set Time\nReply <INDEX>";
+/*
 const char Menu_Strings[] PROGMEM = "1.Change PASS\n2.Add NO\n3.Del NO\n4.En PASS\n5.En Broadcast\n6.Status Freq\n7.Set Time\n8.GPRS\n9.En TCP\n10.COSM\n11.Ping Freq\n12.Calibrate\n13.RESET\nReply <INDEX>";
-
+*/
 /*****************************************************************
     CHANGE PASSWORD
 ******************************************************************/
