@@ -65,7 +65,7 @@ typedef struct App_tag
     /* Public Members */
     uint8_t buffer[100];
     /* Energy measurements */
-    uint16_t VIrms[4];
+    double VIrms[4];
     //user user_settings;
     settings system_settings;
     unsigned char current_phone_no[15];

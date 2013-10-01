@@ -300,11 +300,11 @@ static void vi_string(unsigned char *string)
     uint8_t i;
     for (i = 0; i < 3; i++)
     {
-        itoa((int)app_dev.VIrms[i], (char *)vi, 10);
+        dtostrf(app_dev.VIrms[i], 1, 1, (char *)vi);
         strcat((char *)string, (char *)vi);
         strcat_P((char *)string, PSTR("V "));
     }
-    itoa((int)app_dev.VIrms[i], (char *)vi, 10);
+    dtostrf(app_dev.VIrms[i], 1, 1, (char *)vi);
     strcat((char *)string, (char *)vi);
     strcat_P((char *)string, PSTR("A"));
 }
@@ -945,12 +945,21 @@ static QState get_status(App *const me)
         {
             strcpy((char *)me->mssg_buf, (char *)me->buffer);
             strcat((char *)me->mssg_buf, "\n");
-            QActive_post((QActive *)&emon_dev, EVENT_EMON_READ_ENTITY, VRED_PIN);
+            QActive_post((QActive *)&emon_dev, EVENT_EMON_READ_VOLTAGE, VRED_PIN);
             return Q_HANDLED();
         }
         case EVENT_EMON_MEASUREMENT_DONE:
         {
-            if (!me->i_generic)
+            me->VIrms[me->i_generic] = (uint16_t)Q_PAR(me);
+            if (me->i_generic == 3)
+            {
+                me->VIrms[me->i_generic] = (double)Q_PAR(me);
+                vi_string(me->mssg_buf);
+                Softserial_println((char *)me->mssg_buf);
+                QActive_post((QActive *)me, EVENT_APP_STATUS_READ_DONE, 0);
+                return Q_HANDLED();
+            }
+            else if (!me->i_generic)
             {
                 adc_pin = VYELLOW_PIN;
             }
@@ -961,18 +970,16 @@ static QState get_status(App *const me)
             else if (me->i_generic == 2)
             {
                 adc_pin = IRMS_PIN;
+                me->i_generic++;
+                QActive_post((QActive *)&emon_dev, EVENT_EMON_READ_CURRENT, adc_pin);
+                return Q_HANDLED();
             }
             else
             {
-                me->VIrms[me->i_generic] = (uint16_t)Q_PAR(me);
-                vi_string(me->mssg_buf);
-                Softserial_println((char *)me->mssg_buf);
-                QActive_post((QActive *)me, EVENT_APP_STATUS_READ_DONE, 0);
                 return Q_HANDLED();
             }
-            me->VIrms[me->i_generic] = (uint16_t)Q_PAR(me);
             me->i_generic++;
-            QActive_post((QActive *)&emon_dev, EVENT_EMON_READ_ENTITY, adc_pin);
+            QActive_post((QActive *)&emon_dev, EVENT_EMON_READ_VOLTAGE, adc_pin);
             return Q_HANDLED();
         }
         case Q_EXIT_SIG:
