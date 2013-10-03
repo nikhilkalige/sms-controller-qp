@@ -439,6 +439,11 @@ static uint8_t update_motor_variable()
         return 0;
     }
 }
+
+static void reset_menuhandlers()
+{
+    app_dev.session_expired&= 0xF0;
+}
 /************************************************************************************************************************************
                                                     ***** State Machines *****
 ************************************************************************************************************************************/
@@ -476,6 +481,7 @@ static QState init(App *const me)
             QActive_post((QActive *)&gsm_dev, EVENT_GSM_NETWORK_READ_REQUEST, 0);
             return Q_HANDLED();
         }
+        case EVENT_GSM_INIT_FAILURE:
         case EVENT_GSM_NETWORK_ERROR:
         {
             /* Retry after 30 seconds */
@@ -596,6 +602,12 @@ static QState app_idle(App *const me)
         {
             return Q_TRAN(me->history);
         }
+        case EVENT_GSM_MODULE_FAILURE:
+        case EVENT_GSM_PARSING_ERROR:
+        {
+            reset_menuhandlers();
+            return Q_TRAN(&cleanup);
+        }
         case Q_EXIT_SIG:
         {
             return Q_HANDLED();
@@ -641,6 +653,9 @@ static QState app_active(App *const me)
             }
             return Q_HANDLED();
         }
+        case EVENT_GSM_MODULE_FAILURE:
+        case EVENT_GSM_PARSING_ERROR:
+            reset_menuhandlers();
         case EVENT_APP_TRANSITION_OUT:
         {
             return Q_TRAN(&cleanup);
