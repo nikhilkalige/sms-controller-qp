@@ -619,7 +619,7 @@ static QState inactive_super(Gsm *const me)
         case EVENT_COM_DATA_AVAILABLE:
         {
 #ifdef DEBUG_2
-            Softserial_println("data recieved");
+            Softserial_println("data");
 #endif
 #if 0
             uint8_t size = (uint8_t)Q_PAR(me);
@@ -649,8 +649,8 @@ static QState inactive_systemsetup(Gsm *const me)
         case Q_ENTRY_SIG:
         {
             /* Configure the ports */
-            //GSM_PWR_DDR |= (1 << GSM_PWRKEY);
-            // GSM_PWR_PORT &= ~GSM_PWRKEY;
+            GSM_PWR_DDR |= (1 << GSM_PWRKEY);
+            GSM_PWR_PORT &= ~GSM_PWRKEY;
             return Q_HANDLED();
         }
         case Q_INIT_SIG:
@@ -683,6 +683,10 @@ static QState inactive_opencom(Gsm *const me)
         }
         case EVENT_COM_OPEN_DONE:
         {
+            return Q_HANDLED();
+        }
+        case EVENT_SYSTEM_GSM_INIT:
+        {
             return Q_TRAN(inactive_powering_on);
         }
         case Q_INIT_SIG:
@@ -706,17 +710,13 @@ static QState inactive_powering_on(Gsm *const me)
     {
         case Q_ENTRY_SIG:
         {
-            return Q_HANDLED();
-        }
-        case EVENT_SYSTEM_GSM_INIT:
-        {
-            //GSM_PWR_PORT |= GSM_PWRKEY;
+            GSM_PWR_PORT |= GSM_PWRKEY;
             QActive_arm((QActive *)me, 3 sec);
             return Q_HANDLED();
         }
         case Q_TIMEOUT_SIG:
         {
-            //GSM_PWR_PORT &= ~GSM_PWRKEY;
+            GSM_PWR_PORT &= ~GSM_PWRKEY;
             QActive_disarm((QActive *)me);
             return Q_TRAN(&inactive_check_comlink);
         }
@@ -742,7 +742,8 @@ static QState inactive_check_comlink(Gsm *const me)
         case Q_ENTRY_SIG:
         {
             me->control.timeout = 4;
-            send_at_command();
+            QActive_arm((QActive *)me, 5 sec);
+            //send_at_command();
             return Q_HANDLED();
         }
         case Q_INIT_SIG:
@@ -843,7 +844,7 @@ static QState active_super(Gsm *const me)
         case EVENT_COM_DATA_AVAILABLE:
         {
 #ifdef DEBUG_2
-            Softserial_println("data recieved");
+            Softserial_println("data");
 #endif
             comm_rx_handler((uint8_t)Q_PAR(me));
             return Q_HANDLED();

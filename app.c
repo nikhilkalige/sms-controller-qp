@@ -28,8 +28,8 @@
 #define PORT_MOTOR_ON   PORTD
 #define PORT_MOTOR_OFF  PORTD
 
-#define PIN_MOTOR_ON   1
-#define PIN_MOTOR_OFF  2
+#define PIN_MOTOR_ON   6
+#define PIN_MOTOR_OFF  5
 
 static QState initiate_app(App *const me);
 static QState init(App *const me);
@@ -241,7 +241,7 @@ static void initialize_system()
 
         /*  Add User  */
         temp.id = 1;
-        strcpy_P((char *)temp.phone_no, PSTR("+919964849934"));
+        strcpy_P((char *)temp.phone_no, PSTR("+919901606873"));
         strcpy_P((char *)temp.password, PSTR("1111"));
         Softserial_println((char *)temp.phone_no);
         Softserial_println((char *)temp.password);
@@ -272,6 +272,8 @@ static void initialize_system()
     /* Init other system variables */
     app_dev.check_motor = 0;
     app_dev.motor_on = 0;
+    /* Init system ports */
+    DDRD |= (_BV(PIN_MOTOR_ON)| _BV(PIN_MOTOR_OFF));
 }
 
 static void perform_action(void)
@@ -430,6 +432,15 @@ static uint8_t update_motor_variable()
     {
         app_dev.motor_on = 0;
     }
+    strcat((char *)app_dev.mssg_buf, "\nMotor ");
+    if (app_dev.motor_on)
+    {
+        strcat((char *)app_dev.mssg_buf, "On");
+    }
+    else
+    {
+        strcat((char *)app_dev.mssg_buf, "Off");
+    }
     if (i != app_dev.motor_on)
     {
         return 1;
@@ -442,7 +453,7 @@ static uint8_t update_motor_variable()
 
 static void reset_menuhandlers()
 {
-    app_dev.session_expired&= 0xF0;
+    app_dev.session_expired &= 0xF0;
 }
 /************************************************************************************************************************************
                                                     ***** State Machines *****
@@ -566,7 +577,7 @@ static QState app_idle(App *const me)
                 me->check_motor++;
             }
 
-            if (me->user_gprs_updates)
+            if (me->user_gprs_updates & 0xF0)
             {
                 Softserial_println("timeout ignored");
             }
@@ -860,8 +871,10 @@ static QState validate(App *const me)
 
 static QState action_status(App *const me)
 {
+#if 0
     Softserial_print("s:ac_st");
     print_eventid(Q_SIG(me));
+#endif
     switch (Q_SIG(me))
     {
         case Q_ENTRY_SIG:
@@ -875,6 +888,7 @@ static QState action_status(App *const me)
         }
         case EVENT_APP_STATUS_READ_DONE:
         {
+            update_motor_variable();
             QActive_post((QActive *)&gsm_dev, EVENT_GSM_SMS_SEND, 0);
             return Q_HANDLED();
         }
@@ -1099,15 +1113,6 @@ static QState send_broadcast(App *const me)
                 {
                     me->user_gprs_updates |= 1 << i;
                 }
-            }
-            strcat((char *)me->mssg_buf, "\nMotor ");
-            if (me->motor_on)
-            {
-                strcat((char *)me->mssg_buf, "On");
-            }
-            else
-            {
-                strcat((char *)me->mssg_buf, "Off");
             }
             QActive_post((QActive *)me, EVENT_GSM_SMS_SENT, 0);
             return Q_HANDLED();

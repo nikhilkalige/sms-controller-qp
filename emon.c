@@ -56,8 +56,8 @@ void emon_ctor(void)
 void emon_config(QActive *master)
 {
     emon_dev.master = master;
-    emon_dev.VCAL = 4.8;
-    emon_dev.ICAL = 4.8;
+    emon_dev.VCAL = EMON_VOLTAGE_CALIBRATION;
+    emon_dev.ICAL = EMON_CURRENT_CALIBRATION;
     adc_init((QActive *)&emon_dev);
 }
 

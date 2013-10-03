@@ -34,9 +34,9 @@
 
 #define DEFAULT_STATUS_FREQ     5
 
-#define UPDATE_PERIOD       45 sec
+#define UPDATE_PERIOD       30 sec
 
-#define CURRENT_THRESHOLD       2
+#define CURRENT_THRESHOLD       5
 
 /******************************************************************
 *       All defnitions regarding the EEPROM are defined here
@@ -50,7 +50,7 @@
 ******************************************************************/
 
 #define FIRST_BOOT_ADD 1023
-#define FIRST_BOOT_VALUE 0xAA
+#define FIRST_BOOT_VALUE 0xAB
 
 /* Allocate first 40 bytes for system use */
 #define DEVICE_VERSION_ADDRESS  0

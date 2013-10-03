@@ -46,27 +46,9 @@ uint8_t tx_buffer[100];
 
 int main(void)
 {
-    uint8_t temp, temp1;
-    //temp = MCUCR;
-    temp1 = MCUSR;
-    temp = MCUSR;
     Softserial_begin(9600);
     DDRD |= (1 << 7);
     PORTD |= (1 << 7);
-    //DDRB = 0xff;
-    /* Softserial_print("MCUCR = ");
-     Softserial_print_byte(temp);
-     Softserial_println("");
-     Softserial_print("MCUSR = ");
-     Softserial_print_byte(temp1);
-     Softserial_println("");
-     */
-    //DDRB  = 0xFF;
-    // DDRD  = 0xFF;
-    //Serial_init();
-    //Serial_SendStringNonBlocking("Hi Lonewolf, we are ready to hunt \r\n");
-    //Serial_SendStringNonBlocking("We are waiting for input \r\n");
-    //fifoBuf_clearData(&rx_buffer);
     GSM_config(&app_dev, &com_drv);
     Com_init((QActive *)&gsm_dev, tx_buffer, 100, rx_buffer, 100);
     emon_config((QActive *)&app_dev);
@@ -77,10 +59,6 @@ int main(void)
     Com_ctor();
     emon_ctor();
     Softserial_println("SYSTEMS INITIALIZED");
-    //Serial_print_string("Hi Lonewolf, we are ready to hunt \r\n");
-    //Serial_print_string_flash(test_string);
-    //PORTD ^= (1 << 7);
-    //PORTD ^= (1 << 2);
     return QF_run(); /* transfer control to QF-nano */
     Softserial_println("EXITING MAIN");
     while (1);

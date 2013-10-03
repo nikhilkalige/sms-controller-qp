@@ -27,6 +27,9 @@
 #define EMON_TIMEOUT    2 sec
 #define EMON_CROSSINGS  20
 
+#define EMON_VOLTAGE_CALIBRATION    201
+#define EMON_CURRENT_CALIBRATION    25
+
 typedef struct emon_tag
 {
     QActive super;
