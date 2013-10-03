@@ -564,7 +564,7 @@ static QState app_idle(App *const me)
             {
                 Softserial_println("timeout ignored");
             }
-            else if(me->check_motor)
+            else if (me->check_motor)
             {
                 Softserial_println("freq update");
                 status_freq_updates();
@@ -1011,6 +1011,7 @@ static QState get_status(App *const me)
             if (me->i_generic == 3)
             {
                 vi_string(me->mssg_buf);
+#if 0
                 strcat((char *)me->mssg_buf, "\nMotor ");
                 if (me->motor_on)
                 {
@@ -1020,6 +1021,7 @@ static QState get_status(App *const me)
                 {
                     strcat((char *)me->mssg_buf, "Off");
                 }
+#endif
                 Softserial_println((char *)me->mssg_buf);
                 QActive_post((QActive *)me, EVENT_APP_STATUS_READ_DONE, 0);
                 return Q_HANDLED();
@@ -1082,6 +1084,15 @@ static QState send_broadcast(App *const me)
                 {
                     me->user_gprs_updates |= 1 << i;
                 }
+            }
+            strcat((char *)me->mssg_buf, "\nMotor ");
+            if (me->motor_on)
+            {
+                strcat((char *)me->mssg_buf, "On");
+            }
+            else
+            {
+                strcat((char *)me->mssg_buf, "Off");
             }
             QActive_post((QActive *)me, EVENT_GSM_SMS_SENT, 0);
             return Q_HANDLED();
