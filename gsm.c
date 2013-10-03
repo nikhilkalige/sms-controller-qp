@@ -1182,7 +1182,7 @@ static QState active_sms_send(Gsm *const me)
         }
         case Q_TIMEOUT_SIG:
         {
-            QActive_post((QActive *)me->master, EVNET_GSM_MODULE_FAILURE, 0);
+            QActive_post((QActive *)me->master, EVENT_GSM_MODULE_FAILURE, 0);
             return Q_TRAN(&active_idle);
         }
         case EVENT_GSM_BUFFER_FULL:
@@ -1231,7 +1231,7 @@ static QState active_sms_send(Gsm *const me)
             }
             else
             {
-                QActive_post((QActive *)me->master, EVNET_GSM_MODULE_FAILURE, 0);
+                QActive_post((QActive *)me->master, EVENT_GSM_MODULE_FAILURE, 0);
             }
             return Q_TRAN(&active_idle);
         }
@@ -1292,7 +1292,7 @@ static QState active_sms_delete(Gsm *const me)
         }
         case Q_TIMEOUT_SIG:
         {
-            QActive_post((QActive *)me->master, EVNET_GSM_MODULE_FAILURE, 0);
+            QActive_post((QActive *)me->master, EVENT_GSM_MODULE_FAILURE, 0);
             return Q_TRAN(&active_idle);
         }
         case EVENT_GSM_ACK_RESPONSE:
